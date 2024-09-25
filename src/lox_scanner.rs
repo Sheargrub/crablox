@@ -1,6 +1,5 @@
 pub mod lox_token;
 
-use std::io;
 use crate::lox_scanner::lox_token::*;
 use crate::lox_error;
 
@@ -120,11 +119,23 @@ mod tests {
     use super::*;
     use crate::lox_scanner::TokenData::*;
 
+    fn test_scan_generic(in_string: &str, expected_tokens: Vec<Token>) {
+        let mut scanner = LoxScanner::new(in_string);
+        let tokens = scanner.scan_tokens().expect("Unknown scanning failure.");
+
+        let mut i = 0;
+        for expected in expected_tokens {
+            assert_eq!(
+                tokens[i],
+                expected
+            );
+            i += 1;
+        };
+    }
+
     #[test]
     fn test_scan_delimiters () {
-        let mut scanner = LoxScanner::new("(){}.,;");
-        let tokens = scanner.scan_tokens().expect("Unknown scanning failure.");
-        let expected_tokens = [
+        let expected_tokens = vec![
             Token::new(LeftParen, 1),
             Token::new(RightParen, 1),
             Token::new(LeftBrace, 1),
@@ -134,22 +145,12 @@ mod tests {
             Token::new(Semicolon, 1),
             Token::new(EndOfFile, 1),
         ];
-
-        let mut i = 0;
-        for expected in expected_tokens {
-            assert_eq!(
-                tokens[i],
-                expected
-            );
-            i += 1;
-        };
+        test_scan_generic("(){}.,;", expected_tokens);
     }
 
     #[test]
     fn test_scan_math_ops () {
-        let mut scanner = LoxScanner::new("+-*/%");
-        let tokens = scanner.scan_tokens().expect("Unknown scanning failure.");
-        let expected_tokens = [
+        let expected_tokens = vec![
             Token::new(Plus, 1),
             Token::new(Minus, 1),
             Token::new(Star, 1),
@@ -157,22 +158,12 @@ mod tests {
             Token::new(Percent, 1),
             Token::new(EndOfFile, 1),
         ];
-
-        let mut i = 0;
-        for expected in expected_tokens {
-            assert_eq!(
-                tokens[i],
-                expected
-            );
-            i += 1;
-        };
+        test_scan_generic("+-*/%", expected_tokens);
     }
 
     #[test]
     fn test_scan_comparators () {
-        let mut scanner = LoxScanner::new("<><=>=!===");
-        let tokens = scanner.scan_tokens().expect("Unknown scanning failure.");
-        let expected_tokens = [
+        let expected_tokens = vec![
             Token::new(Less, 1),
             Token::new(Greater, 1),
             Token::new(LessEqual, 1),
@@ -181,15 +172,6 @@ mod tests {
             Token::new(EqualEqual, 1),
             Token::new(EndOfFile, 1),
         ];
-
-        let mut i = 0;
-        for expected in expected_tokens {
-            assert_eq!(
-                tokens[i],
-                expected
-            );
-            i += 1;
-        };
+        test_scan_generic("<><=>=!===", expected_tokens);
     }
-
 }
