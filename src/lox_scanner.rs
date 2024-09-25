@@ -41,9 +41,9 @@ impl LoxScanner {
         else {
             self.inited = true;
 
-            let num_chars = self.source.len();
-            while self.current < num_chars { // TODO: this can panic!
+            while !self.is_at_end() {
                 let c = self.source[self.current];
+                self.current += 1;
 
                 match c {
                     '(' => self.add_token(TokenData::LeftParen),
@@ -53,15 +53,34 @@ impl LoxScanner {
                     ',' => self.add_token(TokenData::Comma),
                     '.' => self.add_token(TokenData::Dot),
                     ';' => self.add_token(TokenData::Semicolon),
-                    '-' => self.add_token(TokenData::Minus),
                     '+' => self.add_token(TokenData::Plus),
+                    '-' => self.add_token(TokenData::Minus),
                     '*' => self.add_token(TokenData::Star),
-                    '/' => self.add_token(TokenData::Slash),
+                    // Slash needs extra handling for comments - see below
                     '%' => self.add_token(TokenData::Percent),
+
+                    '!' => {
+                        if self.match_char('=') { self.add_token(TokenData::BangEqual) }
+                        else                    { self.add_token(TokenData::Bang) }
+                    }
+                    '=' => {
+                        if self.match_char('=') { self.add_token(TokenData::EqualEqual) }
+                        else                    { self.add_token(TokenData::Equal) }
+                    }
+                    '<' => {
+                        if self.match_char('=') { self.add_token(TokenData::LessEqual) }
+                        else                    { self.add_token(TokenData::Less) }
+                    }
+                    '>' => {
+                        if self.match_char('=') { self.add_token(TokenData::GreaterEqual) }
+                        else                    { self.add_token(TokenData::Greater) }
+                    }
+
+                    '/' => self.add_token(TokenData::Slash), // TODO: comment handling
+
                     other => self.add_error(&format!("Unexpected character {c}")),
                 };
 
-                self.current += 1;
                 self.start = self.current;
             }
 
@@ -70,10 +89,20 @@ impl LoxScanner {
         }
     }
 
-    /*
-    fn match(&mut self, c: char) {
+    fn is_at_end(&self) -> bool {
+        self.current >= self.source.len()
+    } 
 
-    }*/
+    // If the next character matches c, consumes it and returns true.
+    // Otherwise, returns false.
+    fn match_char(&mut self, c: char) -> bool {
+        if self.is_at_end() { false }
+        else if self.source[self.current] != c { false }
+        else {
+            self.current += 1;
+            true
+        }
+    }
 
     fn add_token(&mut self, data: TokenData) {
         self.tokens.push(Token{data, line: self.line});
