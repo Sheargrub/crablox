@@ -70,6 +70,11 @@ impl LoxScanner {
         }
     }
 
+    /*
+    fn match(&mut self, c: char) {
+
+    }*/
+
     fn add_token(&mut self, data: TokenData) {
         self.tokens.push(Token{data, line: self.line});
     }
@@ -90,61 +95,72 @@ mod tests {
     fn test_scan_delimiters () {
         let mut scanner = LoxScanner::new("(){}.,;");
         let tokens = scanner.scan_tokens().expect("Unknown scanning failure.");
+        let expected_tokens = [
+            Token::new(LeftParen, 1),
+            Token::new(RightParen, 1),
+            Token::new(LeftBrace, 1),
+            Token::new(RightBrace, 1),
+            Token::new(Dot, 1),
+            Token::new(Comma, 1),
+            Token::new(Semicolon, 1),
+            Token::new(EndOfFile, 1),
+        ];
 
-        assert_eq!(
-            tokens[0],
-            Token::new(LeftParen, 1)
-        );
-        assert_eq!(
-            tokens[1],
-            Token::new(RightParen, 1)
-        );
-        assert_eq!(
-            tokens[2],
-            Token::new(LeftBrace, 1)
-        );
-        assert_eq!(
-            tokens[3],
-            Token::new(RightBrace, 1)
-        );
-        assert_eq!(
-            tokens[4],
-            Token::new(Dot, 1)
-        );
-        assert_eq!(
-            tokens[5],
-            Token::new(Comma, 1)
-        );
-        assert_eq!(
-            tokens[6],
-            Token::new(Semicolon, 1)
-        );
+        let mut i = 0;
+        for expected in expected_tokens {
+            assert_eq!(
+                tokens[i],
+                expected
+            );
+            i += 1;
+        };
     }
 
     #[test]
     fn test_scan_math_ops () {
         let mut scanner = LoxScanner::new("+-*/%");
         let tokens = scanner.scan_tokens().expect("Unknown scanning failure.");
+        let expected_tokens = [
+            Token::new(Plus, 1),
+            Token::new(Minus, 1),
+            Token::new(Star, 1),
+            Token::new(Slash, 1),
+            Token::new(Percent, 1),
+            Token::new(EndOfFile, 1),
+        ];
 
-        assert_eq!(
-            tokens[0],
-            Token::new(Plus, 1)
-        );
-        assert_eq!(
-            tokens[1],
-            Token::new(Minus, 1)
-        );
-        assert_eq!(
-            tokens[2],
-            Token::new(Star, 1)
-        );
-        assert_eq!(
-            tokens[3],
-            Token::new(Slash, 1)
-        );
-        assert_eq!(
-            tokens[4],
-            Token::new(Percent, 1)
-        );
+        let mut i = 0;
+        for expected in expected_tokens {
+            assert_eq!(
+                tokens[i],
+                expected
+            );
+            i += 1;
+        };
     }
+
+    #[test]
+    fn test_scan_comparators () {
+        let mut scanner = LoxScanner::new("<><=>=!===");
+        let tokens = scanner.scan_tokens().expect("Unknown scanning failure.");
+        let expected_tokens = [
+            Token::new(Less, 1),
+            Token::new(Greater, 1),
+            Token::new(LessEqual, 1),
+            Token::new(GreaterEqual, 1),
+            Token::new(BangEqual, 1),
+            Token::new(EqualEqual, 1),
+            Token::new(EndOfFile, 1),
+        ];
+
+        let mut i = 0;
+        for expected in expected_tokens {
+            assert_eq!(
+                tokens[i],
+                expected
+            );
+            i += 1;
+        };
+    }
+
 }
