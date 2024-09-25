@@ -1,15 +1,25 @@
+#[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Clone)]
 pub struct Token {
     pub data : TokenData,
-    pub line : u32,
+    pub line : usize,
 }
 
 impl Token {
+    pub fn new(data: TokenData, line: usize) -> Token {
+        Token{data, line}
+    }
+
     pub fn to_string(self) -> String {
-        format!("{} | {}", self.line, self.data.to_string())
+        format!("[{}] {}", self.line, self.data.to_string())
     }
 }
 
-enum TokenData {
+#[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Clone)]
+pub enum TokenData {
     // Delimiters
     LeftParen, RightParen, LeftBrace, RightBrace,
     Comma, Dot, Semicolon,
@@ -44,6 +54,24 @@ enum TokenData {
 
     // End of File
     EndOfFile,
+}
+
+#[cfg(test)]
+mod token_tests {
+    use super::*;
+
+    #[test]
+    fn construct_identifier () {
+        let my_token = Token {
+            data : TokenData::Identifier(String::from("println")),
+            line : 5,
+        };
+
+        assert_eq!(
+            "[5] Identifier | println", 
+            my_token.to_string(),
+        );
+    }
 }
 
 impl TokenData {
@@ -90,6 +118,15 @@ mod token_data_tests {
         let my_token = TokenData::String(String::from("Hello world!"));
         assert_eq!(
             "String | \"Hello world!\"", 
+            my_token.to_string(),
+        );
+    }
+
+    #[test]
+    fn construct_number () {
+        let my_token = TokenData::Number(42.0);
+        assert_eq!(
+            "Number | 42", 
             my_token.to_string(),
         );
     }
