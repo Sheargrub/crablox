@@ -3,6 +3,22 @@ pub mod lox_token;
 use crate::lox_scanner::lox_token::*;
 use crate::lox_error;
 
+// TODO: There might be a cleaner way of handling this...
+// Also these should probably be moved somewhere else; still deciding on that
+fn is_number(c: char) -> bool {
+    match c {
+        '0'..'9' => true,
+        _ => false,
+    }
+}
+
+fn is_alpha(c: char) -> bool {
+    match c {
+        'A'..'z' => true,
+        _ => false,
+    }
+}
+
 pub struct LoxScanner {
     source : Vec<char>,
     tokens : Vec<Token>,
@@ -81,6 +97,7 @@ impl LoxScanner {
                     },
 
                     '"' => self.process_string(),
+                    '0'..'9' => self.process_number(),
 
                     ' ' => (),
                     '\r' => (),
@@ -88,7 +105,7 @@ impl LoxScanner {
 
                     '\n' => self.line += 1,
 
-                    other => self.add_error(&format!("Unexpected character {c}")),
+                    _ => self.add_error(&format!("Unexpected character {c}")),
                 };
 
                 self.start = self.current;
@@ -137,11 +154,28 @@ impl LoxScanner {
             self.add_error(&format!("Unterminated string starting at line [{start_line}]."))
         }
         else {
-            let user_string_slice = &self.source[begin..self.current];
-            let user_string: String = user_string_slice.iter().collect();
+            let source_slice = &self.source[begin..self.current];
+            let user_string: String = source_slice.iter().collect();
             self.add_token(TokenData::StringData(user_string));
             self.current += 1;
         }
+    }
+
+    fn process_number(&mut self) {
+        let begin = self.current - 1; // Since the number itself triggers this function
+        while !self.is_at_end() && is_number(self.source[self.current]) {
+            self.current += 1;
+        };
+        if !self.is_at_end() && self.source[self.current] == '.' {
+            self.current += 1;
+            while !self.is_at_end() && is_number(self.source[self.current]) {
+                self.current += 1;
+            };
+        };
+        let source_slice = &self.source[begin..self.current];
+        let number_str: String = source_slice.iter().collect();
+        let user_number: f64 = number_str.parse().expect("FATAL: Recieved non-numeric character while parsing number. Note that this should be impossible.");
+        self.add_token(TokenData::Number(user_number));
     }
 
     fn add_token(&mut self, data: TokenData) {
@@ -238,6 +272,21 @@ mod tests {
             Token::new(EndOfFile, 2),
         ];
         test_scan_generic(string_str, expected_tokens);
+    }
+
+    #[test]
+    fn test_scan_numbers () {
+        let number_str = "\
+3.45
+83
+245.30";
+        let expected_tokens = vec![
+            Token::new(Number(3.45), 1),
+            Token::new(Number(83.0), 2),
+            Token::new(Number(245.3), 3),
+            Token::new(EndOfFile, 3),
+        ];
+        test_scan_generic(number_str, expected_tokens);
     }
 
     // TODO: Make this test more robust once the error-passing functionality is improved.
