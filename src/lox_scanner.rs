@@ -75,8 +75,14 @@ impl LoxScanner {
                         else                    { self.add_token(TokenData::Greater) }
                     }
 
-                    '/' => self.add_token(TokenData::Slash), // TODO: comment handling
-
+                    '/' => {
+                        if self.match_char('/') {
+                            while !self.is_at_end() && self.source[self.current] != '\n' {
+                                self.current += 1;
+                            }
+                        }
+                        else { self.add_token(TokenData::Slash) }
+                    }
                     other => self.add_error(&format!("Unexpected character {c}")),
                 };
 
@@ -173,5 +179,16 @@ mod tests {
             Token::new(EndOfFile, 1),
         ];
         test_scan_generic("<><=>=!===", expected_tokens);
+    }
+
+    #[test]
+    fn test_scan_comments () {
+        let comment_str = "\
+//This comment should be ignored.
+//Same with this one.";
+        let expected_tokens = vec![
+            Token::new(EndOfFile, 1),
+        ];
+        test_scan_generic(comment_str, expected_tokens);
     }
 }
