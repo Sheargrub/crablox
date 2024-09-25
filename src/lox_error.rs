@@ -1,30 +1,20 @@
 
-pub struct LoxError {
-    line : u32,
-    message : String,
+
+pub fn generate_err<T>(line: usize, message: &str) -> Result<T, String> {
+    Err(format!("[Line {}] Error: {}", line, message))
 }
 
-impl LoxError {
-    pub fn new(line : u32, message : &str) -> LoxError {
-        LoxError{line, message: String::from(message)}
-    }
-    
-    pub fn to_string(&self) -> String {
-        // todo: unclear what "where" is for in the original function?
-        format!("[Line {}] Error: {}", self.line, self.message)
-    }
-}
 
 #[cfg(test)]
 mod error_tests {
-    use super::*;
+    use crate::lox_error;
 
     #[test]
-    fn error_to_string () {
-        let my_error = LoxError::new(5, "Insufficient crabs");
+    fn generate_err_test () {
+        let my_error = lox_error::generate_err::<usize>(5, "Insufficient crabs");
         assert_eq!(
-            "[Line 5] Error: Insufficient crabs", 
-            my_error.to_string(),
+            Err(String::from("[Line 5] Error: Insufficient crabs")),
+            my_error
         );
     }
 
