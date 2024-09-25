@@ -40,7 +40,7 @@ pub enum TokenData {
 
     // Literals
     Identifier(String),
-    String(String),
+    StringData(String),
     Number(f64),
 
     // Constant Literals
@@ -78,7 +78,7 @@ impl TokenData {
     pub fn to_string(self) -> String {
         match self {
             TokenData::Identifier(val) => format!("Identifier | {val}"),
-            TokenData::String(val) => format!("String | \"{val}\""),
+            TokenData::StringData(val) => format!("String | \"{val}\""),
             TokenData::Number(val) => format!("Number | {val}"),
             
             TokenData::LeftParen => String::from("("),
@@ -115,7 +115,7 @@ mod token_data_tests {
 
     #[test]
     fn construct_string () {
-        let my_token = TokenData::String(String::from("Hello world!"));
+        let my_token = TokenData::StringData(String::from("Hello world!"));
         assert_eq!(
             "String | \"Hello world!\"", 
             my_token.to_string(),

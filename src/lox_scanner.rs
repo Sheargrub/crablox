@@ -61,28 +61,33 @@ impl LoxScanner {
                     '!' => {
                         if self.match_char('=') { self.add_token(TokenData::BangEqual) }
                         else                    { self.add_token(TokenData::Bang) }
-                    }
+                    },
                     '=' => {
                         if self.match_char('=') { self.add_token(TokenData::EqualEqual) }
                         else                    { self.add_token(TokenData::Equal) }
-                    }
+                    },
                     '<' => {
                         if self.match_char('=') { self.add_token(TokenData::LessEqual) }
                         else                    { self.add_token(TokenData::Less) }
-                    }
+                    },
                     '>' => {
                         if self.match_char('=') { self.add_token(TokenData::GreaterEqual) }
                         else                    { self.add_token(TokenData::Greater) }
-                    }
+                    },
 
                     '/' => {
-                        if self.match_char('/') {
-                            while !self.is_at_end() && self.source[self.current] != '\n' {
-                                self.current += 1;
-                            }
-                        }
+                        if self.match_char('/') { self.process_comment() }
                         else { self.add_token(TokenData::Slash) }
-                    }
+                    },
+
+                    '"' => self.process_string(),
+
+                    ' ' => (),
+                    '\r' => (),
+                    '\t' => (),
+
+                    '\n' => self.line += 1,
+
                     other => self.add_error(&format!("Unexpected character {c}")),
                 };
 
@@ -92,6 +97,12 @@ impl LoxScanner {
             self.add_token(TokenData::EndOfFile);
             Ok(self.tokens.clone()) // TODO: check for validity, return error string if not
         }
+    }
+
+    // Returns false if the scanner cannot provide output.
+    // Note that this means it will return false until scan_tokens() is run.
+    pub fn is_valid(&self) -> bool {
+        self.inited && self.valid
     }
 
     fn is_at_end(&self) -> bool {
@@ -106,6 +117,30 @@ impl LoxScanner {
         else {
             self.current += 1;
             true
+        }
+    }
+
+    fn process_comment(&mut self) {
+        while !self.is_at_end() && self.source[self.current] != '\n' {
+            self.current += 1;
+        }
+    }
+
+    fn process_string(&mut self) {
+        let begin = self.current;
+        let start_line = self.line;
+        while !self.is_at_end() && self.source[self.current] != '"' {
+            self.current += 1;
+        };
+        
+        if self.is_at_end() {
+            self.add_error(&format!("Unterminated string starting at line [{start_line}]."))
+        }
+        else {
+            let user_string_slice = &self.source[begin..self.current];
+            let user_string: String = user_string_slice.iter().collect();
+            self.add_token(TokenData::StringData(user_string));
+            self.current += 1;
         }
     }
 
@@ -133,7 +168,7 @@ mod tests {
         for expected in expected_tokens {
             assert_eq!(
                 tokens[i],
-                expected
+                expected,
             );
             i += 1;
         };
@@ -187,8 +222,35 @@ mod tests {
 //This comment should be ignored.
 //Same with this one.";
         let expected_tokens = vec![
-            Token::new(EndOfFile, 1),
+            Token::new(EndOfFile, 2),
         ];
         test_scan_generic(comment_str, expected_tokens);
+    }
+
+    #[test]
+    fn test_scan_strings () {
+        let string_str = "\
+\"This string should be processed.\"
+\"Same with this one.\"";
+        let expected_tokens = vec![
+            Token::new(StringData(String::from("This string should be processed.")), 1),
+            Token::new(StringData(String::from("Same with this one.")), 2),
+            Token::new(EndOfFile, 2),
+        ];
+        test_scan_generic(string_str, expected_tokens);
+    }
+
+    // TODO: Make this test more robust once the error-passing functionality is improved.
+    #[test]
+    fn test_error_unterminated_string () {
+        let string_str = "\
+        \"This string is unterminated.
+        It even trails onto a second line. Yikes.";
+        let mut scanner = LoxScanner::new(string_str);
+        scanner.scan_tokens().expect("Unknown scanning failure.");
+        assert!(
+            !scanner.is_valid(),
+            "Unterminated string was treated as valid."
+        )
     }
 }
