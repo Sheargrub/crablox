@@ -324,7 +324,7 @@ mod tests {
 
     #[test]
     fn test_scan_identifiers() {
-        let string_str = "\
+        let identifier_str = "\
 nil true false and class else
 fun for if or print return super
 this var while foo bar foobar2 cr4b";
@@ -351,7 +351,68 @@ this var while foo bar foobar2 cr4b";
             Token::new(Identifier(String::from("cr4b")), 3),
             Token::new(EndOfFile, 3),
         ];
-        test_scan_generic(string_str, expected_tokens);
+        test_scan_generic(identifier_str, expected_tokens);
+    }
+
+    #[test]
+    fn test_scan_misc() {
+        let misc_str = "= !";
+        let expected_tokens = vec![
+            Token::new(Equal, 1),
+            Token::new(Bang, 1),
+            Token::new(EndOfFile, 1),
+        ];
+        test_scan_generic(misc_str, expected_tokens);
+    }
+
+    #[test]
+    fn test_scan_program () {
+        let program_str = "\
+for (var i = 0; i <= 10; i = i + 1) {
+    print \"Looping once again~\";
+    print i;
+    myFunction();
+    // Helpful documentation
+}";
+        let expected_tokens = vec![
+            Token::new(For, 1),
+            Token::new(LeftParen, 1),
+            Token::new(Var, 1),
+            Token::new(Identifier(String::from("i")), 1),
+            Token::new(Equal, 1),
+            Token::new(Number(0.0), 1),
+            Token::new(Semicolon, 1),
+            Token::new(Identifier(String::from("i")), 1),
+            Token::new(LessEqual, 1),
+            Token::new(Number(10.0), 1),
+            Token::new(Semicolon, 1),
+            Token::new(Identifier(String::from("i")), 1),
+            Token::new(Equal, 1),
+            Token::new(Identifier(String::from("i")), 1),
+            Token::new(Plus, 1),
+            Token::new(Number(1.0), 1),
+            Token::new(RightParen, 1),
+            Token::new(LeftBrace, 1),
+
+            Token::new(Print, 2),
+            Token::new(StringData(String::from("Looping once again~")), 2),
+            Token::new(Semicolon, 2),
+
+            Token::new(Print, 3),
+            Token::new(Identifier(String::from("i")), 3),
+            Token::new(Semicolon, 3),
+
+            Token::new(Identifier(String::from("myFunction")), 4),
+            Token::new(LeftParen, 4),
+            Token::new(RightParen, 4),
+            Token::new(Semicolon, 4),
+
+            // Comment on line 5 yields no tokens
+
+            Token::new(RightBrace, 6),
+            Token::new(EndOfFile, 6),
+        ];
+        test_scan_generic(program_str, expected_tokens);
     }
 
     // TODO: Make this test more robust once the error-passing functionality is improved.
