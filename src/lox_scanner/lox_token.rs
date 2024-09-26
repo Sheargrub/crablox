@@ -24,11 +24,11 @@ pub enum TokenData {
     LeftParen, RightParen, LeftBrace, RightBrace,
     Comma, Dot, Semicolon,
 
-    // Arithmetic Operators
+    // Arithmetic operators
     Minus, Plus, Slash, Star, Percent,
 
-    // ??
-    Bang, BangEqual,
+    // Negation operator
+    Bang,
 
     // Assignment
     Equal, 
@@ -37,22 +37,19 @@ pub enum TokenData {
     EqualEqual,
     Greater, GreaterEqual,
     Less, LessEqual,
+    BangEqual,
 
     // Literals
     Identifier(String),
     StringData(String),
     Number(f64),
 
-    // Constant Literals
-    Nil,
-    True,
-    False,
-
-    // Keywords
+    // Reserved words
+    Nil, True, False,
     And, Class, Else, Fun, For, If, Or,
     Print, Return, Super, This, Var, While,
 
-    // End of File
+    // End of file
     EndOfFile,
 }
 

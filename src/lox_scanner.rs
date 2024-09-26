@@ -19,6 +19,10 @@ fn is_alpha(c: char) -> bool {
     }
 }
 
+fn is_alphanumeric(c: char) -> bool {
+    is_alpha(c) || is_number(c)
+}
+
 pub struct LoxScanner {
     source : Vec<char>,
     tokens : Vec<Token>,
@@ -98,6 +102,7 @@ impl LoxScanner {
 
                     '"' => self.process_string(),
                     '0'..'9' => self.process_number(),
+                    'A'..'z' => self.process_identifier(),
 
                     ' ' => (),
                     '\r' => (),
@@ -155,8 +160,8 @@ impl LoxScanner {
         }
         else {
             let source_slice = &self.source[begin..self.current];
-            let user_string: String = source_slice.iter().collect();
-            self.add_token(TokenData::StringData(user_string));
+            let input_string: String = source_slice.iter().collect();
+            self.add_token(TokenData::StringData(input_string));
             self.current += 1;
         }
     }
@@ -174,8 +179,36 @@ impl LoxScanner {
         };
         let source_slice = &self.source[begin..self.current];
         let number_str: String = source_slice.iter().collect();
-        let user_number: f64 = number_str.parse().expect("FATAL: Recieved non-numeric character while parsing number. Note that this should be impossible.");
-        self.add_token(TokenData::Number(user_number));
+        let input_number: f64 = number_str.parse().expect("FATAL: Recieved non-numeric character while parsing number. Note that this should be impossible.");
+        self.add_token(TokenData::Number(input_number));
+    }
+
+    fn process_identifier(&mut self) {
+        let begin = self.current - 1; // Since the letter itself triggers this function
+        while !self.is_at_end() && is_alphanumeric(self.source[self.current]) {
+            self.current += 1;
+        };
+        let source_slice = &self.source[begin..self.current];
+        let input_string: String = source_slice.iter().collect();
+        match input_string.as_str() { // TODO: hash map would likely be more efficient
+            "nil" => self.add_token(TokenData::Nil),
+            "true" => self.add_token(TokenData::True),
+            "false" => self.add_token(TokenData::False),
+            "and" => self.add_token(TokenData::And),
+            "class" => self.add_token(TokenData::Class),
+            "else" => self.add_token(TokenData::Else),
+            "fun" => self.add_token(TokenData::Fun),
+            "for" => self.add_token(TokenData::For),
+            "if" => self.add_token(TokenData::If),
+            "or" => self.add_token(TokenData::Or),
+            "print" => self.add_token(TokenData::Print),
+            "return" => self.add_token(TokenData::Return),
+            "super" => self.add_token(TokenData::Super),
+            "this" => self.add_token(TokenData::This),
+            "var" => self.add_token(TokenData::Var),
+            "while" => self.add_token(TokenData::While),
+            _ => self.add_token(TokenData::Identifier(input_string)),
+        };
     }
 
     fn add_token(&mut self, data: TokenData) {
@@ -287,6 +320,38 @@ mod tests {
             Token::new(EndOfFile, 3),
         ];
         test_scan_generic(number_str, expected_tokens);
+    }
+
+    #[test]
+    fn test_scan_identifiers() {
+        let string_str = "\
+nil true false and class else
+fun for if or print return super
+this var while foo bar foobar2 cr4b";
+        let expected_tokens = vec![
+            Token::new(Nil, 1),
+            Token::new(True, 1),
+            Token::new(False, 1),
+            Token::new(And, 1),
+            Token::new(Class, 1),
+            Token::new(Else, 1),
+            Token::new(Fun, 2),
+            Token::new(For, 2),
+            Token::new(If, 2),
+            Token::new(Or, 2),
+            Token::new(Print, 2),
+            Token::new(Return, 2),
+            Token::new(Super, 2),
+            Token::new(This, 3),
+            Token::new(Var, 3),
+            Token::new(While, 3),
+            Token::new(Identifier(String::from("foo")), 3),
+            Token::new(Identifier(String::from("bar")), 3),
+            Token::new(Identifier(String::from("foobar2")), 3),
+            Token::new(Identifier(String::from("cr4b")), 3),
+            Token::new(EndOfFile, 3),
+        ];
+        test_scan_generic(string_str, expected_tokens);
     }
 
     // TODO: Make this test more robust once the error-passing functionality is improved.
