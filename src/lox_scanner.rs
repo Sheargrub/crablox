@@ -438,6 +438,56 @@ for (var i = 0; i <= 10; i = i + 1) {
     }
 
     #[test]
+    fn test_error_unexpected_char () {
+        let string_str = "\
+#@
+$";
+        let mut scanner = LoxScanner::new(string_str);
+        let outcome = scanner.scan_tokens();
+        if let Err(error_strings) = outcome {
+            assert_eq!(
+                3,
+                error_strings.len(),
+                "Expected to recieve 3 errors, got {}.", error_strings.len()
+            );
+            assert_eq!(
+                vec![
+                    String::from("[Line 1] Error: Unexpected character '#'."),
+                    String::from("[Line 1] Error: Unexpected character '@'."),
+                    String::from("[Line 2] Error: Unexpected character '$'."),
+                ],
+                error_strings,
+                "Expected to recieve error message on left, got error message on right."
+            );
+        } else {
+            panic!("Unterminated string failed to return an error.");
+        }
+    }
+
+    #[test]
+    fn test_error_unterminated_string () {
+        let string_str = "\
+        \"This string is unterminated.
+        It even trails onto a second line. Yikes.";
+        let mut scanner = LoxScanner::new(string_str);
+        let outcome = scanner.scan_tokens();
+        if let Err(error_strings) = outcome {
+            assert_eq!(
+                1,
+                error_strings.len(),
+                "Expected to recieve 1 error, got {}.", error_strings.len()
+            );
+            assert_eq!(
+                String::from("[Line 2] Error: Unterminated string starting at line [1]."),
+                error_strings[0],
+                "Expected to recieve error message on left, got error message on right."
+            );
+        } else {
+            panic!("Unterminated string failed to return an error.");
+        }
+    }
+    
+    #[test]
     fn test_repeated_calls() {
         let mut valid_scanner = LoxScanner::new("...");
         let _ = valid_scanner.scan_tokens(); // discard
@@ -459,28 +509,5 @@ for (var i = 0; i <= 10; i = i + 1) {
             expected_error,
             "Was unable to accurately fetch scan_tokens() on a repeated call to an invalid LoxScanner object."
         );
-    }
-
-    #[test]
-    fn test_error_unterminated_string () {
-        let string_str = "\
-        \"This string is unterminated.
-        It even trails onto a second line. Yikes.";
-        let mut scanner = LoxScanner::new(string_str);
-        let outcome = scanner.scan_tokens();
-        if let Err(error_strings) = outcome {
-            assert_eq!(
-                error_strings.len(),
-                1,
-                "Expected to recieve 1 error, got {}.", error_strings.len()
-            );
-            assert_eq!(
-                String::from("[Line 2] Error: Unterminated string starting at line [1]."),
-                error_strings[0],
-                "Expected to recieve error message on left, got error message on right."
-            );
-        } else {
-            panic!("Unterminated string failed to return an error.");
-        }
     }
 }
