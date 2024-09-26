@@ -7,14 +7,14 @@ use crate::lox_error;
 // Also these should probably be moved somewhere else; still deciding on that
 fn is_number(c: char) -> bool {
     match c {
-        '0'..'9' => true,
+        '0'..='9' => true,
         _ => false,
     }
 }
 
 fn is_alpha(c: char) -> bool {
     match c {
-        'A'..'z' => true,
+        'A'..='z' => true,
         _ => false,
     }
 }
@@ -101,8 +101,8 @@ impl LoxScanner {
                     },
 
                     '"' => self.process_string(),
-                    '0'..'9' => self.process_number(),
-                    'A'..'z' => self.process_identifier(),
+                    '0'..='9' => self.process_number(),
+                    'A'..='z' => self.process_identifier(),
 
                     ' ' => (),
                     '\r' => (),
@@ -122,9 +122,10 @@ impl LoxScanner {
     }
 
     // Returns false if the scanner cannot provide output.
-    // Note that this means it will return false until scan_tokens() is run.
-    pub fn is_valid(&self) -> bool {
-        self.inited && self.valid
+    // Returns none if the scanner has yet to attempt parsing its string.
+    pub fn is_valid(&self) -> Option<bool> {
+        if self.inited { Some(self.valid) }
+        else { None }
     }
 
     fn is_at_end(&self) -> bool {
@@ -221,6 +222,8 @@ impl LoxScanner {
     }
 
 }
+
+
 
 #[cfg(test)]
 mod tests {
@@ -366,6 +369,21 @@ this var while foo bar foobar2 cr4b";
     }
 
     #[test]
+    fn test_scan_range_edges() {
+        let misc_str = "000.0 999.9 AAA zzz \"AAA\" \"zzz\"";
+        let expected_tokens = vec![
+            Token::new(Number(0.0), 1),
+            Token::new(Number(999.9), 1),
+            Token::new(Identifier(String::from("AAA")), 1),
+            Token::new(Identifier(String::from("zzz")), 1),
+            Token::new(StringData(String::from("AAA")), 1),
+            Token::new(StringData(String::from("zzz")), 1),
+            Token::new(EndOfFile, 1),
+        ];
+        test_scan_generic(misc_str, expected_tokens);
+    }
+
+    #[test]
     fn test_scan_program () {
         let program_str = "\
 for (var i = 0; i <= 10; i = i + 1) {
@@ -424,7 +442,7 @@ for (var i = 0; i <= 10; i = i + 1) {
         let mut scanner = LoxScanner::new(string_str);
         scanner.scan_tokens().expect("Unknown scanning failure.");
         assert!(
-            !scanner.is_valid(),
+            !scanner.is_valid().expect("Scanner somehow uninitialized."),
             "Unterminated string was treated as valid."
         )
     }

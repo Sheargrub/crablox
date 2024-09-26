@@ -83,7 +83,7 @@ impl TokenData {
             TokenData::LeftBrace => String::from("{"),
             TokenData::RightBrace => String::from("}"),
 
-            other => String::from("Unidentified static token"), // todo
+            _ => String::from("Unidentified static token"), // todo
         }
     }
 }
