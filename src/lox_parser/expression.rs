@@ -1,40 +1,46 @@
+use crate::lox_parser::exp_component::*;
 
-/*
+#[derive(Debug)]
 pub enum Expression {
-    L(Literal),
-    U(Unary),
-    B(Binary),
+    LExp(Literal),
+    UExp(Unary),
+    BExp(Binary),
 }
 
-pub enum Literal {
-    Number(f64),
-    String(f64),
-    True,
-    False,
-    Nil,
+use crate::lox_parser::exp_component::Literal::*;
+use crate::lox_parser::exp_component::Unary::*;
+use crate::lox_parser::expression::Expression::*;
+impl Expression {
+
+    pub fn new_number(n: f64) -> Expression {
+        LExp(Number(n))
+    }
+    pub fn new_string(s: &str) -> Expression {
+        LExp(StringData(String::from(s)))
+    }
+    pub fn new_bool(b: bool) -> Expression {
+        if b { LExp(True) }
+        else { LExp(False) }
+    }
+    pub fn new_nil() -> Expression {
+        LExp(Nil)
+    }
+
+    pub fn new_negative(e: Box<Expression>) -> Expression {
+        UExp(Negative(e))
+    }
+    pub fn new_not(e: Box<Expression>) -> Expression {
+        UExp(Not(e))
+    }
+
+    pub fn new_binary(
+        left: Box<Expression>,
+        operator: BinaryOp,
+        right: Box<Expression>
+    ) -> Expression {
+        BExp(Binary{ left, operator, right })
+    }
 }
 
-pub enum Unary {
-    Negative(Expression),
-    Not(Expression),
-}
 
-pub struct Binary {
-    Left: Expression,
-    Operator: BinaryOp,
-    Right: Expression,
-}
 
-pub enum BinaryOp {
-    Equal,
-    NotEqual,
-    Less,
-    LessEqual,
-    Greater,
-    GreaterEqual,
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Modulo,
-}*/
