@@ -3,26 +3,6 @@ pub mod lox_token;
 use crate::lox_scanner::lox_token::*;
 use crate::lox_error;
 
-// TODO: There might be a cleaner way of handling this...
-// Also these should probably be moved somewhere else; still deciding on that
-fn is_number(c: char) -> bool {
-    match c {
-        '0'..='9' => true,
-        _ => false,
-    }
-}
-
-fn is_alpha(c: char) -> bool {
-    match c {
-        'A'..='z' => true,
-        _ => false,
-    }
-}
-
-fn is_alphanumeric(c: char) -> bool {
-    is_alpha(c) || is_number(c)
-}
-
 pub struct LoxScanner {
     source : Vec<char>,
     tokens : Vec<Token>,
@@ -224,6 +204,24 @@ impl LoxScanner {
         self.valid = false;
     }
 
+}
+
+fn is_number(c: char) -> bool {
+    match c {
+        '0'..='9' => true,
+        _ => false,
+    }
+}
+
+fn is_alpha(c: char) -> bool {
+    match c {
+        'A'..='z' => true,
+        _ => false,
+    }
+}
+
+fn is_alphanumeric(c: char) -> bool {
+    is_alpha(c) || is_number(c)
 }
 
 
