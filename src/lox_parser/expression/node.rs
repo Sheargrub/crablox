@@ -1,6 +1,7 @@
 use crate::lox_parser::expression::Expression;
 
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub enum Literal {
     Number(f64),
     StringData(String),
@@ -10,12 +11,14 @@ pub enum Literal {
 }
 
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub enum Unary {
     Negative(Box<Expression>),
     Not(Box<Expression>),
 }
 
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub struct Binary {
     pub left: Box<Expression>,
     pub operator: BinaryOp,
@@ -23,6 +26,7 @@ pub struct Binary {
 }
 
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub enum BinaryOp {
     Equal,
     NotEqual,

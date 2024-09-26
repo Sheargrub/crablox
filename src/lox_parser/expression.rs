@@ -1,15 +1,20 @@
-use crate::lox_parser::exp_component::*;
+pub mod node;
+
+use crate::lox_parser::expression as lox_expression;
+use lox_expression::node as lox_node;
+use lox_node::*;
 
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub enum Expression {
     LExp(Literal),
     UExp(Unary),
     BExp(Binary),
 }
 
-use crate::lox_parser::exp_component::Literal::*;
-use crate::lox_parser::exp_component::Unary::*;
-use crate::lox_parser::expression::Expression::*;
+use lox_expression::Expression::*;
+use lox_node::Literal::*;
+use lox_node::Unary::*;
 impl Expression {
 
     pub fn new_number(n: f64) -> Expression {
@@ -41,6 +46,4 @@ impl Expression {
         BExp(Binary{ left, operator, right })
     }
 }
-
-
 
