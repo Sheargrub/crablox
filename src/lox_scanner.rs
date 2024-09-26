@@ -26,7 +26,7 @@ fn is_alphanumeric(c: char) -> bool {
 pub struct LoxScanner {
     source : Vec<char>,
     tokens : Vec<Token>,
-    errors : Vec<Result<Vec<Token>, String>>,
+    error_strings : Vec<String>,
     start : usize,
     current : usize,
     line : usize,
@@ -39,11 +39,12 @@ impl LoxScanner {
     pub fn new(source: &str) -> LoxScanner {
         let source = source.chars().collect();
         let tokens = Vec::new();
-        let errors = Vec::new();
+        let error_strings = Vec::new();
+        
         LoxScanner {
             source,
             tokens,
-            errors,
+            error_strings,
             start : 0,
             current : 0,
             line : 1,
@@ -52,10 +53,10 @@ impl LoxScanner {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, String> {
+    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, Vec<String>> {
         if self.inited {
-            Err(String::from("Scanner already inited"))
-            // TODO: allow repeat calls to this function
+            if self.valid { Ok(self.tokens.clone()) }
+            else { Err(self.error_strings.clone()) }
         }
         else {
             self.inited = true;
@@ -110,14 +111,15 @@ impl LoxScanner {
 
                     '\n' => self.line += 1,
 
-                    _ => self.add_error(&format!("Unexpected character {c}")),
+                    _ => self.add_error(&format!("Unexpected character '{c}'.")),
                 };
 
                 self.start = self.current;
             }
 
             self.add_token(TokenData::EndOfFile);
-            Ok(self.tokens.clone()) // TODO: check for validity, return error string if not
+            if self.valid { Ok(self.tokens.clone()) }
+            else { Err(self.error_strings.clone()) }
         }
     }
 
@@ -153,6 +155,7 @@ impl LoxScanner {
         let begin = self.current;
         let start_line = self.line;
         while !self.is_at_end() && self.source[self.current] != '"' {
+            if self.source[self.current] == '\n' { self.line += 1 };
             self.current += 1;
         };
         
@@ -217,7 +220,7 @@ impl LoxScanner {
     }
 
     fn add_error(&mut self, message: &str) {
-        self.errors.push(lox_error::generate_err::<Vec<Token>>(self.line, message)); // TODO: icky coupling
+        self.error_strings.push(lox_error::new_error_string(self.line, message));
         self.valid = false;
     }
 
@@ -433,17 +436,48 @@ for (var i = 0; i <= 10; i = i + 1) {
         test_scan_generic(program_str, expected_tokens);
     }
 
-    // TODO: Make this test more robust once the error-passing functionality is improved.
+    #[test]
+    fn test_repeated_calls() {
+        let mut valid_scanner = LoxScanner::new("...");
+        let _ = valid_scanner.scan_tokens(); // discard
+        let tokens = valid_scanner.scan_tokens().expect("Unknown scanning failure.");
+        let expected_tokens = vec![Token::new(Dot, 1), Token::new(Dot, 1), Token::new(Dot, 1), Token::new(EndOfFile, 1)];
+        assert_eq!(
+            tokens,
+            expected_tokens,
+            "Was unable to accurately fetch scan_tokens() on a repeated call to a valid LoxScanner object."
+        );
+
+        let mut invalid_scanner = LoxScanner::new("@");
+        let _ = invalid_scanner.scan_tokens(); // discard
+        let error = invalid_scanner.scan_tokens();
+        let expected_error_str = String::from("[Line 1] Error: Unexpected character '@'.");
+        let expected_error: Result<Vec<lox_token::Token>, Vec<String>> = Err(vec![expected_error_str]);
+        assert_eq!(
+            error,
+            expected_error,
+            "Was unable to accurately fetch scan_tokens() on a repeated call to an invalid LoxScanner object."
+        );
+    }
+
     #[test]
     fn test_error_unterminated_string () {
         let string_str = "\
         \"This string is unterminated.
         It even trails onto a second line. Yikes.";
         let mut scanner = LoxScanner::new(string_str);
-        scanner.scan_tokens().expect("Unknown scanning failure.");
-        assert!(
-            !scanner.is_valid().expect("Scanner somehow uninitialized."),
-            "Unterminated string was treated as valid."
-        )
+        let outcome = scanner.scan_tokens();
+        if let Err(error_strings) = outcome {
+            assert_eq!(
+                error_strings.len(),
+                1,
+            );
+            assert_eq!(
+                String::from("[Line 2] Error: Unterminated string starting at line [1]."),
+                error_strings[0]
+            );
+        } else {
+            panic!("Unterminated string failed to return an error");
+        }
     }
 }

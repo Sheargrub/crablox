@@ -1,7 +1,7 @@
 
 
-pub fn generate_err<T>(line: usize, message: &str) -> Result<T, String> {
-    Err(format!("[Line {}] Error: {}", line, message))
+pub fn new_error_string(line: usize, message: &str) -> String {
+    format!("[Line {}] Error: {}", line, message)
 }
 
 
@@ -11,10 +11,10 @@ mod error_tests {
 
     #[test]
     fn generate_err_test () {
-        let my_error = lox_error::generate_err::<usize>(5, "Insufficient crabs");
+        let error_string = lox_error::new_error_string(5, "Insufficient crabs");
         assert_eq!(
-            Err(String::from("[Line 5] Error: Insufficient crabs")),
-            my_error
+            String::from("[Line 5] Error: Insufficient crabs"),
+            error_string
         );
     }
 
