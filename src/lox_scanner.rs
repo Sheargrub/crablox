@@ -240,8 +240,9 @@ mod tests {
         let mut i = 0;
         for expected in expected_tokens {
             assert_eq!(
-                tokens[i],
                 expected,
+                tokens[i],
+                "Expected to recieve token on left, got token on right."
             );
             i += 1;
         };
@@ -471,13 +472,15 @@ for (var i = 0; i <= 10; i = i + 1) {
             assert_eq!(
                 error_strings.len(),
                 1,
+                "Expected to recieve 1 error, got {}.", error_strings.len()
             );
             assert_eq!(
                 String::from("[Line 2] Error: Unterminated string starting at line [1]."),
-                error_strings[0]
+                error_strings[0],
+                "Expected to recieve error message on left, got error message on right."
             );
         } else {
-            panic!("Unterminated string failed to return an error");
+            panic!("Unterminated string failed to return an error.");
         }
     }
 }
