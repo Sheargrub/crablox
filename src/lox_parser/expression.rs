@@ -10,6 +10,7 @@ pub enum Expression {
     LExp(Literal),
     UExp(Unary),
     BExp(Binary),
+    Grouping(Box<Expression>),
 }
 
 use lox_expression::Expression::*;
@@ -44,6 +45,10 @@ impl Expression {
         right: Box<Expression>
     ) -> Expression {
         BExp(Binary{ left, operator, right })
+    }
+
+    pub fn new_grouping(e: Box<Expression>) -> Expression {
+        Grouping(e)
     }
 }
 

@@ -2,14 +2,14 @@ use crate::lox_parser::token::*;
 use crate::lox_error;
 
 pub struct LoxScanner {
-    source : Vec<char>,
-    tokens : Vec<Token>,
-    error_strings : Vec<String>,
-    start : usize,
-    current : usize,
-    line : usize,
-    inited : bool,
-    valid : bool,
+    source: Vec<char>,
+    tokens: Vec<Token>,
+    error_strings: Vec<String>,
+    start: usize,
+    current: usize,
+    line: usize,
+    inited: bool,
+    valid: bool,
 }
 
 impl LoxScanner {
