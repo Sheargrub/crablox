@@ -1,4 +1,3 @@
-//use crate::lox_scanner::*;
 
 pub struct LoxInterpreter {
     instruction : String,

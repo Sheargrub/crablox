@@ -1,5 +1,5 @@
 
-pub mod lox_scanner;
+pub mod lox_parser;
 pub mod lox_interpreter;
 pub mod lox_feeder;
 pub mod lox_error;

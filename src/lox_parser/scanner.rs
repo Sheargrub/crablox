@@ -1,6 +1,4 @@
-pub mod lox_token;
-
-use crate::lox_scanner::lox_token::*;
+use crate::lox_parser::token::*;
 use crate::lox_error;
 
 pub struct LoxScanner {
@@ -229,7 +227,7 @@ fn is_alphanumeric(c: char) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lox_scanner::TokenData::*;
+    use crate::lox_parser::token::TokenData::*;
 
     fn test_scan_generic(in_string: &str, expected_tokens: Vec<Token>) {
         let mut scanner = LoxScanner::new(in_string);
@@ -501,7 +499,7 @@ $";
         let _ = invalid_scanner.scan_tokens(); // discard
         let error = invalid_scanner.scan_tokens();
         let expected_error_str = String::from("[Line 1] Error: Unexpected character '@'.");
-        let expected_error: Result<Vec<lox_token::Token>, Vec<String>> = Err(vec![expected_error_str]);
+        let expected_error: Result<Vec<Token>, Vec<String>> = Err(vec![expected_error_str]);
         assert_eq!(
             error,
             expected_error,
