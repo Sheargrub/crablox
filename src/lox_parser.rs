@@ -292,193 +292,229 @@ mod tests {
             "Expected to recieve left side; recieved right."
         );
     }
-
-    #[test]
-    fn test_expression_primary() {
-        let test_str = "\"Hello world!\"";
-        let expected = Expression::new_string("Hello world!");
-        test_expression_generic(test_str, expected);
+    
+    mod primary_expressions {
+        use super::*;
+        
+        #[test]
+        fn test_expression_primary() {
+            let test_str = "\"Hello world!\"";
+            let expected = Expression::new_string("Hello world!");
+            test_expression_generic(test_str, expected);
+        }
     }
 
-    #[test]
-    fn test_expression_unary_not() {
-        let test_str = "!!false";
-        let expected = Expression::new_not(Box::new(Expression::new_not(Box::new(Expression::new_bool(false)))));
-        test_expression_generic(test_str, expected);
+    mod unary_expressions {
+        use super::*;
+
+        #[test]
+        fn test_expression_unary_not() {
+            let test_str = "!!false";
+            let expected = Expression::new_not(Box::new(Expression::new_not(Box::new(Expression::new_bool(false)))));
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_unary_negative() {
+            let test_str = "-4.3";
+            let expected = Expression::new_negative(Box::new(Expression::new_number(4.3)));
+            test_expression_generic(test_str, expected);
+        }
     }
 
-    #[test]
-    fn test_expression_unary_negative() {
-        let test_str = "-4.3";
-        let expected = Expression::new_negative(Box::new(Expression::new_number(4.3)));
-        test_expression_generic(test_str, expected);
-    }
+    mod binary_expressions {
+        use super::*;
 
-    #[test]
-    fn test_expression_modulo() {
-        let test_str = "3 % 5";
-        let expected = Expression::new_binary(
-            Box::new(Expression::new_number(3.0)),
-            BinaryOp::Modulo,
-            Box::new(Expression::new_number(5.0)),
-        );
-        test_expression_generic(test_str, expected);
-    }
-
-    #[test]
-    fn test_expression_divide() {
-        let test_str = "3 / 5";
-        let expected = Expression::new_binary(
-            Box::new(Expression::new_number(3.0)),
-            BinaryOp::Divide,
-            Box::new(Expression::new_number(5.0)),
-        );
-        test_expression_generic(test_str, expected);
-    }
-
-    #[test]
-    fn test_expression_multiply() {
-        let test_str = "4.1 * 5";
-        let expected = Expression::new_binary(
-            Box::new(Expression::new_number(4.1)),
-            BinaryOp::Multiply,
-            Box::new(Expression::new_number(5.0)),
-        );
-        test_expression_generic(test_str, expected);
-    }
-
-    #[test]
-    fn test_expression_add() {
-        let test_str = "4.1 + 5";
-        let expected = Expression::new_binary(
-            Box::new(Expression::new_number(4.1)),
-            BinaryOp::Add,
-            Box::new(Expression::new_number(5.0)),
-        );
-        test_expression_generic(test_str, expected);
-    }
-
-    #[test]
-    fn test_expression_subtract() {
-        let test_str = "4.1 - 5";
-        let expected = Expression::new_binary(
-            Box::new(Expression::new_number(4.1)),
-            BinaryOp::Subtract,
-            Box::new(Expression::new_number(5.0)),
-        );
-        test_expression_generic(test_str, expected);
-    }
-
-    #[test]
-    fn test_expression_math_ops() {
-        let test_str = "3 + -4 * -5 - 6";
-        let expected = Expression::new_binary(
-            Box::new(Expression::new_binary(
+        #[test]
+        fn test_expression_modulo() {
+            let test_str = "3 % 5";
+            let expected = Expression::new_binary(
                 Box::new(Expression::new_number(3.0)),
+                BinaryOp::Modulo,
+                Box::new(Expression::new_number(5.0)),
+            );
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_divide() {
+            let test_str = "3 / 5";
+            let expected = Expression::new_binary(
+                Box::new(Expression::new_number(3.0)),
+                BinaryOp::Divide,
+                Box::new(Expression::new_number(5.0)),
+            );
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_multiply() {
+            let test_str = "4.1 * 5";
+            let expected = Expression::new_binary(
+                Box::new(Expression::new_number(4.1)),
+                BinaryOp::Multiply,
+                Box::new(Expression::new_number(5.0)),
+            );
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_add() {
+            let test_str = "4.1 + 5";
+            let expected = Expression::new_binary(
+                Box::new(Expression::new_number(4.1)),
                 BinaryOp::Add,
-                Box::new(Expression::new_binary(
-                    Box::new(Expression::new_negative(Box::new(Expression::new_number(4.0)))),
-                    BinaryOp::Multiply,
-                    Box::new(Expression::new_negative(Box::new(Expression::new_number(5.0)))),
-                )),
-            )),
-            BinaryOp::Subtract,
-            Box::new(Expression::new_number(6.0)),
-        );
-        test_expression_generic(test_str, expected);
-    }
+                Box::new(Expression::new_number(5.0)),
+            );
+            test_expression_generic(test_str, expected);
+        }
 
-    #[test]
-    fn test_expression_less() {
-        let test_str = "4.1 < 5";
-        let expected = Expression::new_binary(
-            Box::new(Expression::new_number(4.1)),
-            BinaryOp::Less,
-            Box::new(Expression::new_number(5.0)),
-        );
-        test_expression_generic(test_str, expected);
-    }
+        #[test]
+        fn test_expression_subtract() {
+            let test_str = "4.1 - 5";
+            let expected = Expression::new_binary(
+                Box::new(Expression::new_number(4.1)),
+                BinaryOp::Subtract,
+                Box::new(Expression::new_number(5.0)),
+            );
+            test_expression_generic(test_str, expected);
+        }
 
-    #[test]
-    fn test_expression_less_equal() {
-        let test_str = "4.1 <= 5";
-        let expected = Expression::new_binary(
-            Box::new(Expression::new_number(4.1)),
-            BinaryOp::LessEqual,
-            Box::new(Expression::new_number(5.0)),
-        );
-        test_expression_generic(test_str, expected);
-    }
-
-    #[test]
-    fn test_expression_greater() {
-        let test_str = "4.1 > 5";
-        let expected = Expression::new_binary(
-            Box::new(Expression::new_number(4.1)),
-            BinaryOp::Greater,
-            Box::new(Expression::new_number(5.0)),
-        );
-        test_expression_generic(test_str, expected);
-    }
-
-    #[test]
-    fn test_expression_greater_equal() {
-        let test_str = "4.1 >= 5";
-        let expected = Expression::new_binary(
-            Box::new(Expression::new_number(4.1)),
-            BinaryOp::GreaterEqual,
-            Box::new(Expression::new_number(5.0)),
-        );
-        test_expression_generic(test_str, expected);
-    }
-
-    #[test]
-    fn test_expression_equal() {
-        let test_str = "4.1 == 5";
-        let expected = Expression::new_binary(
-            Box::new(Expression::new_number(4.1)),
-            BinaryOp::Equal,
-            Box::new(Expression::new_number(5.0)),
-        );
-        test_expression_generic(test_str, expected);
-    }
-
-    #[test]
-    fn test_expression_not_equal() {
-        let test_str = "4.1 != 5";
-        let expected = Expression::new_binary(
-            Box::new(Expression::new_number(4.1)),
-            BinaryOp::NotEqual,
-            Box::new(Expression::new_number(5.0)),
-        );
-        test_expression_generic(test_str, expected);
-    }
-
-    #[test]
-    fn test_expression_comparison() {
-        let test_str = "15 % 5 >= 2 != 1.5 + 1.5 < 2";
-        let expected = Expression::new_binary(
-            Box::new(Expression::new_binary(
-                Box::new(Expression::new_binary(
-                    Box::new(Expression::new_number(15.0)),
-                    BinaryOp::Modulo,
-                    Box::new(Expression::new_number(5.0)),
-                )),
-                BinaryOp::GreaterEqual,
-                Box::new(Expression::new_number(2.0)),
-            )),
-            BinaryOp::NotEqual,
-            Box::new(Expression::new_binary(
-                Box::new(Expression::new_binary(
-                    Box::new(Expression::new_number(1.5)),
-                    BinaryOp::Add,
-                    Box::new(Expression::new_number(1.5)),
-                )),
+        #[test]
+        fn test_expression_less() {
+            let test_str = "4.1 < 5";
+            let expected = Expression::new_binary(
+                Box::new(Expression::new_number(4.1)),
                 BinaryOp::Less,
-                Box::new(Expression::new_number(2.0)),
-            )),
-        );
-        test_expression_generic(test_str, expected);
+                Box::new(Expression::new_number(5.0)),
+            );
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_less_equal() {
+            let test_str = "4.1 <= 5";
+            let expected = Expression::new_binary(
+                Box::new(Expression::new_number(4.1)),
+                BinaryOp::LessEqual,
+                Box::new(Expression::new_number(5.0)),
+            );
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_greater() {
+            let test_str = "4.1 > 5";
+            let expected = Expression::new_binary(
+                Box::new(Expression::new_number(4.1)),
+                BinaryOp::Greater,
+                Box::new(Expression::new_number(5.0)),
+            );
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_greater_equal() {
+            let test_str = "4.1 >= 5";
+            let expected = Expression::new_binary(
+                Box::new(Expression::new_number(4.1)),
+                BinaryOp::GreaterEqual,
+                Box::new(Expression::new_number(5.0)),
+            );
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_equal() {
+            let test_str = "4.1 == 5";
+            let expected = Expression::new_binary(
+                Box::new(Expression::new_number(4.1)),
+                BinaryOp::Equal,
+                Box::new(Expression::new_number(5.0)),
+            );
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_not_equal() {
+            let test_str = "4.1 != 5";
+            let expected = Expression::new_binary(
+                Box::new(Expression::new_number(4.1)),
+                BinaryOp::NotEqual,
+                Box::new(Expression::new_number(5.0)),
+            );
+            test_expression_generic(test_str, expected);
+        }
+
+    }
+
+    mod compound_expressions {
+        use super::*;
+
+        #[test]
+        fn test_expression_math_ops() {
+            let test_str = "3 + -4 * -5 - 6";
+            let expected = Expression::new_binary(
+                Box::new(Expression::new_binary(
+                    Box::new(Expression::new_number(3.0)),
+                    BinaryOp::Add,
+                    Box::new(Expression::new_binary(
+                        Box::new(Expression::new_negative(Box::new(Expression::new_number(4.0)))),
+                        BinaryOp::Multiply,
+                        Box::new(Expression::new_negative(Box::new(Expression::new_number(5.0)))),
+                    )),
+                )),
+                BinaryOp::Subtract,
+                Box::new(Expression::new_number(6.0)),
+            );
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_comparison() {
+            let test_str = "15 % 5 >= 2 != 1.5 + 1.5 < 2";
+            let expected = Expression::new_binary(
+                Box::new(Expression::new_binary(
+                    Box::new(Expression::new_binary(
+                        Box::new(Expression::new_number(15.0)),
+                        BinaryOp::Modulo,
+                        Box::new(Expression::new_number(5.0)),
+                    )),
+                    BinaryOp::GreaterEqual,
+                    Box::new(Expression::new_number(2.0)),
+                )),
+                BinaryOp::NotEqual,
+                Box::new(Expression::new_binary(
+                    Box::new(Expression::new_binary(
+                        Box::new(Expression::new_number(1.5)),
+                        BinaryOp::Add,
+                        Box::new(Expression::new_number(1.5)),
+                    )),
+                    BinaryOp::Less,
+                    Box::new(Expression::new_number(2.0)),
+                )),
+            );
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_grouping() {
+            let test_str = "(3 + -4) * (-5 - 6)";
+            let expected = Expression::new_binary(
+                Box::new(Expression::new_grouping(Box::new(Expression::new_binary(
+                    Box::new(Expression::new_number(3.0)),
+                    BinaryOp::Add,
+                    Box::new(Expression::new_negative(Box::new(Expression::new_number(4.0)))),
+                )))),
+                BinaryOp::Multiply,
+                Box::new(Expression::new_grouping(Box::new(Expression::new_binary(
+                    Box::new(Expression::new_negative(Box::new(Expression::new_number(5.0)))),
+                    BinaryOp::Subtract,
+                    Box::new(Expression::new_number(6.0)),
+                )))),
+            );
+            test_expression_generic(test_str, expected);
+        }
     }
 
 }
