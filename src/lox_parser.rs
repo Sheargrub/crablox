@@ -12,10 +12,12 @@ use lox_expression::Expression;
 use lox_node::*;
 
 use crate::lox_error;
+use std::rc::Rc;
 
 pub struct LoxParser {
     tokens: Vec<Token>,
     error_strings: Vec<String>,
+    output: Rc<Expression>,
     current: usize,
     line: usize,
     inited: bool,
@@ -27,11 +29,12 @@ impl LoxParser {
     pub fn new() -> LoxParser {
         let tokens = Vec::new();
         let error_strings = Vec::new();
+        let output = Rc::new(Expression::LExp(Literal::Nil));
         let current = 0;
         let line = 1;
         let inited = false;
         let valid = true;
-        LoxParser{tokens, error_strings, current, line, inited, valid}
+        LoxParser{tokens, error_strings, output, current, line, inited, valid}
     }
 
     pub fn load_string(&mut self, s: &str) -> Result<(), Vec<String>> {
@@ -55,11 +58,19 @@ impl LoxParser {
         self.inited = true;
     }
 
-    /*
-    pub fn parse(&mut self, tokens: <Vec<Token>>) -> Result<Expression, Vec<String>> {
-        let mut current = 0;
+    pub fn parse(&mut self, tokens: Vec<Token>) -> Result<Rc<Expression>, Vec<String>> {
+        if !self.inited {
+            self.inited = true;
+            let result = self.expression();
+            match result {
+                Ok(b) => self.output = Rc::new(*b),
+                Err(()) => self.valid = false,
+            }
+        }
+
+        if self.valid { Ok(self.output.clone()) }
+        else { Err(self.error_strings.clone()) }
     }
-    */
 
     fn expression(&mut self) -> Result<Box<Expression>, ()> {
         let t = self.consume()?;
