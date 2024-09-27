@@ -1,5 +1,5 @@
-use crate::lox_parser::token::*;
-use crate::lox_error;
+use crate::lox_envs::components as lox;
+use lox::parser::token::*;
 
 pub struct LoxScanner {
     source: Vec<char>,
@@ -198,7 +198,7 @@ impl LoxScanner {
     }
 
     fn add_error(&mut self, message: &str) {
-        self.error_strings.push(lox_error::new_error_string(self.line, message));
+        self.error_strings.push(lox::error::new_error_string(self.line, message));
         self.valid = false;
     }
 
@@ -227,7 +227,7 @@ fn is_alphanumeric(c: char) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lox_parser::token::TokenData::*;
+    use TokenData::*;
 
     fn test_scan_generic(in_string: &str, expected_tokens: Vec<Token>) {
         let mut scanner = LoxScanner::new(in_string);

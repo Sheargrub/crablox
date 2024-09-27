@@ -1,10 +1,10 @@
-use crate::lox_parser::*;
-use crate::lox_instructions::{statement as lox_statement, expression as lox_expression, node as lox_node};
-use lox_statement::Statement;
-use lox_expression::Expression;
-use lox_expression::Expression::*;
-use lox_node::*;
-use lox_node::Literal::*;
+use crate::lox_envs::components as lox;
+use lox::instructions::{statement, expression, node};
+use statement::Statement;
+use expression::Expression;
+use expression::Expression::*;
+use node::*;
+use node::Literal::*;
 
 pub struct LoxInterpreter {
 
@@ -71,7 +71,7 @@ impl LoxInterpreter {
     }
 
     fn evaluate_expr_binary(&self, b: Binary) -> Result<Literal, String> {
-        use lox_node::BinaryOp::*;
+        use node::BinaryOp::*;
         
         let left = self.evaluate_expr(*b.left)?;
         let right = self.evaluate_expr(*b.right)?;
@@ -119,8 +119,7 @@ mod tests {
     use super::*;
 
     fn string_to_expr(s: &str) -> Expression {
-        use crate::lox_parser::*;
-        let mut parser = LoxParser::new();
+        let mut parser = lox::parser::LoxParser::new();
         parser.load_string(s).expect("Error while scanning input string.");
         let statements = parser.parse().expect("Error while parsing expression.");
         if let Statement::Expr(e) = statements[0].clone() { // TODO: refactor to remove clone call

@@ -1,9 +1,9 @@
 use std::fs;
 use std::error::Error;
 
-use crate::lox_interpreter::*;
-use crate::lox_parser::*;
-use crate::lox_instructions::statement::*;
+use crate::lox_envs::components as lox;
+use lox::interpreter::*;
+use lox::parser::*;
 
 pub struct LoxProgram {
     instructions : String,

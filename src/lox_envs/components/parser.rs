@@ -1,18 +1,18 @@
 mod token;
 mod scanner;
 
-use crate::lox_parser::scanner as lox_scanner;
+use crate::lox_envs::components as lox;
+
+use lox::parser::scanner as lox_scanner;
 use lox_scanner::*;
 
-use crate::lox_parser::token as lox_token;
+use lox::parser::token as lox_token;
 use lox_token::*;
 
-use crate::lox_instructions::{statement as lox_statement, expression as lox_expression, node as lox_node};
+use lox::instructions::{statement as lox_statement, expression as lox_expression, node as lox_node};
 use lox_statement::Statement;
 use lox_expression::Expression;
 use lox_node::*;
-
-use crate::lox_error;
 
 pub struct LoxParser {
     tokens: Vec<Token>,
@@ -358,7 +358,7 @@ impl LoxParser {
     }
 
     fn add_error(&mut self, message: &str) {
-        self.error_strings.push(lox_error::new_error_string(self.line, message));
+        self.error_strings.push(lox::error::new_error_string(self.line, message));
         self.valid = false;
     }
 

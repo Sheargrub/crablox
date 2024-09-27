@@ -1,6 +1,7 @@
-use crate::lox_instructions::expression as lox_expression;
-use crate::lox_instructions::node as lox_node;
-use lox_node::*;
+use crate::lox_envs::components as lox;
+use lox::instructions::node::*;
+use Literal::*;
+use Unary::*;
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -12,9 +13,7 @@ pub enum Expression {
     Grouping(Box<Expression>),
 }
 
-use lox_expression::Expression::*;
-use lox_node::Literal::*;
-use lox_node::Unary::*;
+use Expression::*;
 impl Expression {
     pub fn boxed_literal(l: Literal) -> Box<Expression> {
         Box::new(LExp(l))

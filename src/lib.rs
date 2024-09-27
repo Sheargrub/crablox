@@ -1,10 +1,8 @@
-pub mod lox_instructions;
-pub mod lox_parser;
-pub mod lox_interpreter;
-pub mod lox_envs;
-pub mod lox_error;
+pub mod lox_envs {
+    pub mod program;
+    mod components;
+}
 
-use crate::lox_interpreter::*;
 use crate::lox_envs::program::*;
 
 pub fn run_file(file_name: &str) {
