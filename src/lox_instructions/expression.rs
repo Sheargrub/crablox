@@ -4,6 +4,7 @@ use lox_node::*;
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub enum Expression {
     LExp(Literal),
     UExp(Unary),
@@ -15,7 +16,6 @@ use lox_expression::Expression::*;
 use lox_node::Literal::*;
 use lox_node::Unary::*;
 impl Expression {
-
     pub fn boxed_literal(l: Literal) -> Box<Expression> {
         Box::new(LExp(l))
     }

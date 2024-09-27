@@ -12,15 +12,15 @@ use lox_expression::Expression;
 use lox_node::*;
 
 use crate::lox_error;
-use std::rc::Rc;
 
 pub struct LoxParser {
     tokens: Vec<Token>,
     error_strings: Vec<String>,
-    output: Rc<Expression>,
+    output: Expression,
     current: usize,
     line: usize,
     inited: bool,
+    loaded: bool,
     valid: bool,
 }
 
@@ -29,12 +29,13 @@ impl LoxParser {
     pub fn new() -> LoxParser {
         let tokens = Vec::new();
         let error_strings = Vec::new();
-        let output = Rc::new(Expression::LExp(Literal::Nil));
+        let output = Expression::LExp(Literal::Nil);
         let current = 0;
         let line = 1;
         let inited = false;
+        let loaded = false;
         let valid = true;
-        LoxParser{tokens, error_strings, output, current, line, inited, valid}
+        LoxParser{tokens, error_strings, output, current, line, inited, loaded, valid}
     }
 
     pub fn load_string(&mut self, s: &str) -> Result<(), Vec<String>> {
@@ -56,19 +57,21 @@ impl LoxParser {
         self.line = 1;
         self.valid = true;
         self.inited = true;
+        self.loaded = false;
     }
 
-    pub fn parse(&mut self, tokens: Vec<Token>) -> Result<Rc<Expression>, Vec<String>> {
-        if !self.inited {
-            self.inited = true;
+    pub fn parse(&mut self) -> Result<Expression, Vec<String>> {
+        if self.inited && !self.loaded {
+            self.loaded = true;
             let result = self.expression();
             match result {
-                Ok(b) => self.output = Rc::new(*b),
+                Ok(b) => self.output = *b,
                 Err(()) => self.valid = false,
             }
         }
 
-        if self.valid { Ok(self.output.clone()) }
+        if !self.loaded { Err(vec![String::from("Error: parser has not recieved input.")]) }
+        else if self.valid { Ok(self.output.clone()) }
         else { Err(self.error_strings.clone()) }
     }
 
@@ -494,7 +497,6 @@ mod tests {
             );
             test_expression_generic(test_str, expected);
         }
-
     }
 
     mod compound_expressions {
