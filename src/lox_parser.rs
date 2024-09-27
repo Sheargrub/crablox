@@ -334,12 +334,12 @@ mod tests {
     
     fn test_expression_generic(test_str: &str, expected: Box<Expression>) {
         let mut parser = LoxParser::new();
-        parser.load_string(test_str).expect("Failed to load test string.");
-        let result = parser.expression().expect("Error while parsing expression.");
+        parser.load_string(test_str).expect("Error while scanning input string.");
+        let result = parser.parse().expect("Error while parsing expression.");
         // TODO: set up this handler to print out the errors from the parser
 
         assert_eq!(
-            expected,
+            *expected,
             result,
             "Expected to recieve left side; recieved right."
         );

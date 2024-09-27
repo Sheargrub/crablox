@@ -87,8 +87,8 @@ mod tests {
     fn string_to_expr(s: &str) -> Expression {
         use crate::lox_parser::*;
         let mut parser = LoxParser::new();
-        parser.load_string(s).expect("Scanning failed.");
-        parser.parse().expect("Parsing failed.")
+        parser.load_string(s).expect("Error while scanning input string.");
+        parser.parse().expect("Error while parsing expression.")
     }
 
     fn test_expression_generic(s: &str, expected: Literal) {
