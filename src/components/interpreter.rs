@@ -25,6 +25,17 @@ impl LoxInterpreter {
         }
     }
 
+    pub fn evaluate_decl(&self, s: Statement) -> Result<(), String> {
+        use Statement::*;
+        match s {
+            Decl(_, _) => {
+                // TODO
+                Ok(())
+            },
+            _ => self.evaluate_stmt(s)
+        }
+    }
+
     pub fn evaluate_stmt(&self, s: Statement) -> Result<(), String> {
         use Statement::*;
         match s {
@@ -37,6 +48,9 @@ impl LoxInterpreter {
                 self.evaluate_expr(*e)?;
                 Ok(())
             },
+            Decl(_, _) => {
+                Err(String::from("Cannot use a declaration within another statement."))
+            }
         }
     }
 

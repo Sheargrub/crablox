@@ -5,6 +5,19 @@ use core::fmt;
 #[derive(Debug)]
 #[derive(PartialEq)]
 #[derive(Clone)]
+pub struct Identifier {
+    id: String,
+}
+
+impl Identifier {
+    pub fn new(id: &str) -> Identifier {
+        Identifier{ id: String::from(id) }
+    }
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Clone)]
 pub enum Literal {
     Number(f64),
     StringData(String),

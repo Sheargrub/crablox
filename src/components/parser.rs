@@ -14,6 +14,8 @@ use lox_statement::Statement;
 use lox_expression::Expression;
 use lox_node::*;
 
+static semicolon_errstr: &str = "Expected ';' at end of statement.";
+
 pub struct LoxParser {
     tokens: Vec<Token>,
     error_strings: Vec<String>,
@@ -85,36 +87,51 @@ impl LoxParser {
     fn statement(&mut self) -> Result<Statement, ()> {
         let next = self.peek();
         if let Some(t) = next {
-            Ok(match t.data {
+            match t.data {
+                TokenData::Var => {
+                    self.advance().expect("If-let condition should guarantee advance()");
+                    self.statement_decl()
+                }
+
                 TokenData::Print => {
-                    self.consume().expect("If-let condition should guarantee consume()");
-                    let e = self.handle_unary_statement()?;
-                    Statement::Print(e)
+                    self.advance().expect("If-let condition should guarantee advance()");
+                    let e = self.handle_statement_unary()?;
+                    Ok(Statement::Print(e))
                 }
     
                 _ => { // Expression statement
-                    let e = self.handle_unary_statement()?;
-                    Statement::Expr(e)
+                    let e = self.handle_statement_unary()?;
+                    Ok(Statement::Expr(e))
                 },
-            })
+            }
         } else {
             self.add_error("Attempted to read a statement while no tokens were present.");
             Err(())
         }
     }
 
-    fn handle_unary_statement(&mut self) -> Result<Box<Expression>, ()> {
-        let e = self.expression()?;
-        let sc = self.consume()?;
-        if let TokenData::Semicolon = sc.data { Ok(e) }
-        else {
-            self.add_error("Expected ';' at end of expression.");
+    fn statement_decl(&mut self) -> Result<Statement, ()> {
+        let next = self.advance()?;
+        if let TokenData::Identifier(id) = next.data {
+            self.consume(TokenData::Equal, "Expected assignment operator after variable name.")?;
+            let d = Statement::Decl(Identifier::new(&id), self.expression()?);
+            self.consume(TokenData::Semicolon, semicolon_errstr)?;
+            Ok(d)
+        } else {
+            self.add_error("Expected variable name after 'var'.");
             Err(())
         }
+        
+    }
+
+    fn handle_statement_unary(&mut self) -> Result<Box<Expression>, ()> {
+        let e = self.expression()?;
+        self.consume(TokenData::Semicolon, semicolon_errstr)?;
+        Ok(e)
     }
 
     fn expression(&mut self) -> Result<Box<Expression>, ()> {
-        let t = self.consume()?;
+        let t = self.advance()?;
         Ok(self.equality(t)?)
     }
 
@@ -123,8 +140,8 @@ impl LoxParser {
         loop {
             match self.peek() {
                 Some(Token { data: TokenData::BangEqual, line: _ }) => {
-                    self.consume()?;
-                    let right = self.consume()?;
+                    self.advance()?;
+                    let right = self.advance()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::NotEqual,
@@ -132,8 +149,8 @@ impl LoxParser {
                     )
                 },
                 Some(Token { data: TokenData::EqualEqual, line: _ }) => {
-                    self.consume()?;
-                    let right = self.consume()?;
+                    self.advance()?;
+                    let right = self.advance()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Equal,
@@ -151,8 +168,8 @@ impl LoxParser {
         loop {
             match self.peek() {
                 Some(Token { data: TokenData::Less, line: _ }) => {
-                    self.consume()?;
-                    let right = self.consume()?;
+                    self.advance()?;
+                    let right = self.advance()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Less,
@@ -160,8 +177,8 @@ impl LoxParser {
                     )
                 },
                 Some(Token { data: TokenData::LessEqual, line: _ }) => {
-                    self.consume()?;
-                    let right = self.consume()?;
+                    self.advance()?;
+                    let right = self.advance()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::LessEqual,
@@ -169,8 +186,8 @@ impl LoxParser {
                     )
                 },
                 Some(Token { data: TokenData::Greater, line: _ }) => {
-                    self.consume()?;
-                    let right = self.consume()?;
+                    self.advance()?;
+                    let right = self.advance()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Greater,
@@ -178,8 +195,8 @@ impl LoxParser {
                     )
                 },
                 Some(Token { data: TokenData::GreaterEqual, line: _ }) => {
-                    self.consume()?;
-                    let right = self.consume()?;
+                    self.advance()?;
+                    let right = self.advance()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::GreaterEqual,
@@ -197,8 +214,8 @@ impl LoxParser {
         loop {
             match self.peek() {
                 Some(Token { data: TokenData::Minus, line: _ }) => {
-                    self.consume()?;
-                    let right = self.consume()?;
+                    self.advance()?;
+                    let right = self.advance()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Subtract,
@@ -206,8 +223,8 @@ impl LoxParser {
                     )
                 },
                 Some(Token { data: TokenData::Plus, line: _ }) => {
-                    self.consume()?;
-                    let right = self.consume()?;
+                    self.advance()?;
+                    let right = self.advance()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Add,
@@ -225,8 +242,8 @@ impl LoxParser {
         loop {
             match self.peek() {
                 Some(Token { data: TokenData::Percent, line: _ }) => {
-                    self.consume()?;
-                    let right = self.consume()?;
+                    self.advance()?;
+                    let right = self.advance()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Modulo,
@@ -234,8 +251,8 @@ impl LoxParser {
                     );
                 },
                 Some(Token { data: TokenData::Slash, line: _ }) => {
-                    self.consume()?;
-                    let right = self.consume()?;
+                    self.advance()?;
+                    let right = self.advance()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Divide,
@@ -243,8 +260,8 @@ impl LoxParser {
                     );
                 },
                 Some(Token { data: TokenData::Star, line: _ }) => {
-                    self.consume()?;
-                    let right = self.consume()?;
+                    self.advance()?;
+                    let right = self.advance()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Multiply,
@@ -260,12 +277,12 @@ impl LoxParser {
     fn unary(&mut self, t: Token) -> Result<Box<Expression>, ()> {
         match t.data {
             TokenData::Bang => {
-                let arg = self.consume()?;
+                let arg = self.advance()?;
                 let u = self.unary(arg)?;
                 Ok(Expression::boxed_not(u))
             },
             TokenData::Minus => {
-                let arg = self.consume()?;
+                let arg = self.advance()?;
                 let u = self.unary(arg)?;
                 Ok(Expression::boxed_negative(u))
             },
@@ -285,7 +302,7 @@ impl LoxParser {
                 let e = self.expression()?;
                 if !self.is_at_end() {
                     if let Some(Token{ data: TokenData::RightParen, line: _ }) = self.peek() {
-                        self.consume()?;
+                        self.advance()?;
                         Ok(Expression::boxed_grouping(e))
                     } else {
                         self.add_error("Missing close parenthesis.");
@@ -311,7 +328,7 @@ impl LoxParser {
 
     fn synchronize(&mut self) {
         while !self.is_at_end() {
-            let prev = self.consume().expect("While loop condition should guarantee consume()");
+            let prev = self.advance().expect("While loop condition should guarantee advance()");
             if let TokenData::Semicolon = prev.data { break; }
             let next = self.peek();
             if let Some(t) = next {
@@ -340,7 +357,7 @@ impl LoxParser {
     }
 
     // Will trigger error detection at end of file.
-    fn consume(&mut self) -> Result<Token, ()> {
+    fn advance(&mut self) -> Result<Token, ()> {
         if !self.is_at_end() {
             let t = self.tokens[self.current].clone();
             self.line = t.line;
@@ -349,6 +366,18 @@ impl LoxParser {
         }
         else { 
             self.add_error("Ran out of tokens unexpectedly. (This likely indicates a scanner bug.)");
+            Err(())
+        }
+    }
+
+    // Will trigger error detection at end of file or mismatched data type.
+    fn consume(&mut self, token_type: TokenData, error_str: &str) -> Result<Token, ()> {
+        use std::mem::discriminant;
+        let next = self.advance()?;
+        if discriminant(&token_type) == discriminant(&next.data) {
+            Ok(next)
+        } else {
+            self.add_error(error_str);
             Err(())
         }
     }
@@ -372,15 +401,35 @@ mod tests {
     
     fn test_expression_generic(test_str: &str, expected: Box<Expression>) {
         let mut parser = LoxParser::new();
-        parser.load_string(test_str).expect("Error while scanning input string.");
-        let result = parser.expression().expect("Error while parsing expression.");
-        // TODO: set up this handler to print out the errors from the parser
+        parser.load_string(test_str).expect("Error while scanning input string");
+        let output = parser.expression();
 
-        assert_eq!(
-            expected,
-            result,
-            "Expected to recieve left side; recieved right."
-        );
+        if let Ok(result) = output {
+            assert_eq!(
+                expected,
+                result,
+                "Expected to recieve left side; recieved right."
+            );
+        } else {
+            panic!("Error while parsing expression: {:?}", parser.error_strings);
+        }
+        
+    }
+
+    fn test_statement_generic(test_str: &str, expected: Statement) {
+        let mut parser = LoxParser::new();
+        parser.load_string(test_str).expect("Error while scanning input string");
+        let output = parser.statement();
+
+        if let Ok(result) = output {
+            assert_eq!(
+                expected,
+                result,
+                "Expected to recieve left side; recieved right."
+            );
+        } else {
+            panic!("Error while parsing statement: {:?}", parser.error_strings);
+        }
     }
     
     mod primary_expressions {
@@ -603,6 +652,90 @@ mod tests {
                 )),
             );
             test_expression_generic(test_str, expected);
+        }
+    }
+
+    mod statements {
+        use super::*;
+
+        #[test]
+        fn test_statement_expression() {
+            let test_str = "3 + -4 * -5 - 6;";
+            let expected = Statement::Expr(Expression::boxed_binary(
+                Expression::boxed_binary(
+                    Expression::boxed_number(3.0),
+                    BinaryOp::Add,
+                    Expression::boxed_binary(
+                        Expression::boxed_negative(Expression::boxed_number(4.0)),
+                        BinaryOp::Multiply,
+                        Expression::boxed_negative(Expression::boxed_number(5.0)),
+                    ),
+                ),
+                BinaryOp::Subtract,
+                Expression::boxed_number(6.0),
+            ));
+            test_statement_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_statement_print() {
+            let test_str = "print 3 + -4 * -5 - 6;";
+            let expected = Statement::Print(Expression::boxed_binary(
+                Expression::boxed_binary(
+                    Expression::boxed_number(3.0),
+                    BinaryOp::Add,
+                    Expression::boxed_binary(
+                        Expression::boxed_negative(Expression::boxed_number(4.0)),
+                        BinaryOp::Multiply,
+                        Expression::boxed_negative(Expression::boxed_number(5.0)),
+                    ),
+                ),
+                BinaryOp::Subtract,
+                Expression::boxed_number(6.0),
+            ));
+            test_statement_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_statement_decl() {
+            let test_str = "var i = 0;";
+            let expected = Statement::Decl(
+                Identifier::new("i"),
+                Expression::boxed_number(0.0),
+            );
+            test_statement_generic(test_str, expected);
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_statement_bad_decl() {
+            let test_str = "var i 0;";
+            let expected = Statement::Decl(
+                Identifier::new("i"),
+                Expression::boxed_number(0.0),
+            );
+            test_statement_generic(test_str, expected);
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_statement_no_semicolon() {
+            let test_str = "0.0";
+            let expected = Statement::Expr(
+                Expression::boxed_number(0.0),
+            );
+            test_statement_generic(test_str, expected);
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_statement_no_semicolon_decl() {
+            let test_str = "var = i 0";
+            let expected = Statement::Decl(
+                Identifier::new("i"),
+                Expression::boxed_number(0.0),
+            );
+            test_statement_generic(test_str, expected);
         }
     }
 
