@@ -269,61 +269,111 @@ impl LoxParser {
 mod tests {
     use super::*;
     
+    fn test_expression_generic(test_str: &str, expected: Expression) {
+        let mut parser = LoxParser::new();
+        parser.load_string(test_str).expect("Failed to load test string.");
+        let result = parser.expression();
+
+        assert_eq!(
+            expected,
+            result,
+            "Expected to recieve left side; recieved right."
+        );
+    }
+
     #[test]
     fn test_expression_primary() {
-        
-        let tokens = vec![
-            Token::new(TokenData::StringData(String::from("Hello world!")), 1),
-            Token::new(TokenData::EndOfFile, 1),
-        ];
-        let mut parser = LoxParser{
-            tokens,
-            error_strings: Vec::new(),
-            current: 0,
-            inited: true,
-            valid: true,
-        };
-
-        let t = parser.consume().expect("Parser failed to consume a token.");
-        let result = parser.primary(t);
-        
+        let test_str = "\"Hello world!\"";
         let expected = Expression::new_string("Hello world!");
-
-        assert_eq!(
-            expected,
-            *result,
-            "Expected to recieve left side; recieved right."
-        );
+        test_expression_generic(test_str, expected);
     }
 
     #[test]
-    fn test_expression_unary() {
-        
-        let tokens = vec![
-            Token::new(TokenData::Bang, 1),
-            Token::new(TokenData::Bang, 1),
-            Token::new(TokenData::False, 1),
-            Token::new(TokenData::EndOfFile, 1),
-        ];
-        let mut parser = LoxParser{
-            tokens,
-            error_strings: Vec::new(),
-            current: 0,
-            inited: true,
-            valid: true,
-        };
-
-        let t = parser.consume().expect("Parser failed to consume a token.");
-        let result = parser.unary(t);
-        
+    fn test_expression_unary_not() {
+        let test_str = "!!false";
         let expected = Expression::new_not(Box::new(Expression::new_not(Box::new(Expression::new_bool(false)))));
-
-        assert_eq!(
-            expected,
-            *result,
-            "Expected to recieve left side; recieved right."
-        );
+        test_expression_generic(test_str, expected);
     }
 
+    #[test]
+    fn test_expression_unary_negative() {
+        let test_str = "-4.3";
+        let expected = Expression::new_negative(Box::new(Expression::new_number(4.3)));
+        test_expression_generic(test_str, expected);
+    }
+
+    #[test]
+    fn test_expression_modulo() {
+        let test_str = "3 % 5";
+        let expected = Expression::new_binary(
+            Box::new(Expression::new_number(3.0)),
+            BinaryOp::Modulo,
+            Box::new(Expression::new_number(5.0)),
+        );
+        test_expression_generic(test_str, expected);
+    }
+
+    #[test]
+    fn test_expression_divide() {
+        let test_str = "3 / 5";
+        let expected = Expression::new_binary(
+            Box::new(Expression::new_number(3.0)),
+            BinaryOp::Divide,
+            Box::new(Expression::new_number(5.0)),
+        );
+        test_expression_generic(test_str, expected);
+    }
+
+    #[test]
+    fn test_expression_multiply() {
+        let test_str = "4.1 * 5";
+        let expected = Expression::new_binary(
+            Box::new(Expression::new_number(4.1)),
+            BinaryOp::Multiply,
+            Box::new(Expression::new_number(5.0)),
+        );
+        test_expression_generic(test_str, expected);
+    }
+
+    #[test]
+    fn test_expression_add() {
+        let test_str = "4.1 + 5";
+        let expected = Expression::new_binary(
+            Box::new(Expression::new_number(4.1)),
+            BinaryOp::Add,
+            Box::new(Expression::new_number(5.0)),
+        );
+        test_expression_generic(test_str, expected);
+    }
+
+    #[test]
+    fn test_expression_subtract() {
+        let test_str = "4.1 - 5";
+        let expected = Expression::new_binary(
+            Box::new(Expression::new_number(4.1)),
+            BinaryOp::Subtract,
+            Box::new(Expression::new_number(5.0)),
+        );
+        test_expression_generic(test_str, expected);
+    }
+
+    #[test]
+    fn test_expression_math_ops() {
+        let test_str = "3 + 4 * 5 - 6";
+        let expected = Expression::new_binary(
+            Box::new(Expression::new_binary(
+                Box::new(Expression::new_number(3.0)),
+                BinaryOp::Add,
+                Box::new(Expression::new_binary(
+                    Box::new(Expression::new_number(4.0)),
+                    BinaryOp::Multiply,
+                    Box::new(Expression::new_number(5.0)),
+                )),
+            )),
+            BinaryOp::Subtract,
+            Box::new(Expression::new_number(6.0)),
+        );
+        test_expression_generic(test_str, expected);
+    }
 
 }
