@@ -30,7 +30,7 @@ impl LoxInterpreter {
         match s {
             Print(e) => {
                 // TODO: I'd like to get a proper std_out working
-                println!("{:?}", self.evaluate_expr(*e)?);
+                println!("{}", self.evaluate_expr(*e)?);
                 Ok(())
             },
             Expr(e) => {
@@ -78,7 +78,7 @@ impl LoxInterpreter {
 
         match b.operator {
             Add => {
-                let error_str = format!("Attempted to add mismatched operands {:?} and {:?}.", left, right);
+                let error_str = format!("Attempted to add mismatched operands {} and {}.", left, right);
                 match (left, right) {
                     (Number(m), Number(n)) => Ok(Number(m + n)),
                     (StringData(s), StringData(t)) => Ok(StringData(format!("{}{}", s, t))),
@@ -111,8 +111,10 @@ fn is_truthful(l: Literal) -> bool {
 
 fn get_number(l: Literal) -> Result<f64, String> {
     if let Number(n) = l { Ok(n) }
-    else { Err(format!("Attempted to use literal {:?} in place of a Number.", l)) }
+    else { Err(format!("Attempted to use literal {} in place of a Number.", l)) }
 }
+
+
 
 #[cfg(test)]
 mod tests {

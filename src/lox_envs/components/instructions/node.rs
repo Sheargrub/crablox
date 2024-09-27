@@ -1,5 +1,6 @@
 use crate::lox_envs::components as lox;
 use lox::instructions::expression::Expression;
+use core::fmt;
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -9,6 +10,17 @@ pub enum Literal {
     StringData(String),
     Boolean(bool),
     Nil,
+}
+
+impl fmt::Display for Literal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Literal::Number(n) => write!(f, "{}", n),
+            Literal::StringData(s) => write!(f, "{}", s),
+            Literal::Boolean(b) => write!(f, "{}", b),
+            Literal::Nil => write!(f, "Nil"),
+        }
+    }
 }
 
 #[derive(Debug)]
