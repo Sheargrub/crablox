@@ -16,62 +16,63 @@ impl LoxInterpreter {
     }    
 }
 
-pub fn evaluate(e: Expression) -> Literal {
+pub fn evaluate(e: Expression) -> Result<Literal, String> {
     match e {
-        LExp(l) => l,
+        LExp(l) => Ok(l),
         UExp(u) => evaluate_unary(u),
         BExp(b) => evaluate_binary(b),
         Grouping(boxed_exp) => evaluate(*boxed_exp),
     }
 }
 
-fn evaluate_unary(u: Unary) -> Literal {
+fn evaluate_unary(u: Unary) -> Result<Literal, String> {
     match u {
         Unary::Negative(expr) => {
             match *expr {
-                LExp(l) => Number(-get_number(l)),
+                LExp(l) => Ok(Number(-get_number(l)?)),
                 other => {
-                    let inner = Expression::boxed_literal(evaluate(other));
+                    let inner = Expression::boxed_literal(evaluate(other)?);
                     evaluate_unary(Unary::Negative(inner))
                 },
             }
         },
         Unary::Not(expr) => {
-            if let LExp(l) = *expr { Boolean(is_truthful(l)) }
+            if let LExp(l) = *expr { Ok(Boolean(is_truthful(l))) }
             else {
-                let inner = Expression::boxed_literal(evaluate(*expr));
+                let inner = Expression::boxed_literal(evaluate(*expr)?);
                 evaluate_unary(Unary::Not(inner))
             }
         },
     }
 }
 
-fn evaluate_binary(b: Binary) -> Literal {
+fn evaluate_binary(b: Binary) -> Result<Literal, String> {
     use lox_node::BinaryOp::*;
     
-    let left = evaluate(*b.left);
-    let right = evaluate(*b.right);
+    let left = evaluate(*b.left)?;
+    let right = evaluate(*b.right)?;
 
     match b.operator {
         Add => {
+            let error_str = format!("Attempted to add mismatched operands {:?} and {:?}.", left, right);
             match (left, right) {
-                (Number(m), Number(n)) => Number(m + n),
-                (StringData(s), StringData(t)) => StringData(format!("{}{}", s, t)),
-                _ => panic!("Unhandled exception: mismatched operands to +."),
+                (Number(m), Number(n)) => Ok(Number(m + n)),
+                (StringData(s), StringData(t)) => Ok(StringData(format!("{}{}", s, t))),
+                _ => Err(error_str),
             }
         }
-        Subtract => Number(get_number(left) - get_number(right)),
-        Multiply => Number(get_number(left) * get_number(right)),
-        Divide => Number(get_number(left) / get_number(right)),
-        Modulo => Number(get_number(left) % get_number(right)),
+        Subtract => Ok(Number(get_number(left)? - get_number(right)?)),
+        Multiply => Ok(Number(get_number(left)? * get_number(right)?)),
+        Divide => Ok(Number(get_number(left)? / get_number(right)?)),
+        Modulo => Ok(Number(get_number(left)? % get_number(right)?)),
 
-        Less => Boolean(get_number(left) < get_number(right)),
-        LessEqual => Boolean(get_number(left) <= get_number(right)),
-        Greater => Boolean(get_number(left) > get_number(right)),
-        GreaterEqual => Boolean(get_number(left) >= get_number(right)),
+        Less => Ok(Boolean(get_number(left)? < get_number(right)?)),
+        LessEqual => Ok(Boolean(get_number(left)? <= get_number(right)?)),
+        Greater => Ok(Boolean(get_number(left)? > get_number(right)?)),
+        GreaterEqual => Ok(Boolean(get_number(left)? >= get_number(right)?)),
 
-        Equal => Boolean(left == right),
-        NotEqual => Boolean(left != right),
+        Equal => Ok(Boolean(left == right)),
+        NotEqual => Ok(Boolean(left != right)),
     }
 }
 
@@ -83,7 +84,7 @@ fn is_truthful(l: Literal) -> bool {
     }
 }
 
-fn get_number(l: Literal) -> f64 {
-    if let Number(n) = l { n }
-    else { panic!("Unhandled exception: attempted to cast to Number") }
+fn get_number(l: Literal) -> Result<f64, String> {
+    if let Number(n) = l { Ok(n) }
+    else { Err(format!("Attempted to use literal {:?} in place of a Number", l)) }
 }
