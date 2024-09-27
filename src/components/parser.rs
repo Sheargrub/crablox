@@ -112,16 +112,23 @@ impl LoxParser {
 
     fn statement_decl(&mut self) -> Result<Statement, ()> {
         let next = self.advance()?;
+
         if let TokenData::Identifier(id) = next.data {
-            self.consume(TokenData::Equal, "Expected assignment operator after variable name.")?;
-            let d = Statement::Decl(Identifier::new(&id), self.expression()?);
+            let mut expr = Expression::boxed_nil();
+            if !self.is_at_end() && self.peek().unwrap().data == TokenData::Equal {
+                self.advance().expect("is_at_end() check should guarantee advance()");
+                expr = self.expression()?;
+            }
+
+            let d = Statement::Decl(Identifier::new(&id), expr);
             self.consume(TokenData::Semicolon, semicolon_errstr)?;
             Ok(d)
-        } else {
+        }
+        
+        else {
             self.add_error("Expected variable name after 'var'.");
             Err(())
         }
-        
     }
 
     fn handle_statement_unary(&mut self) -> Result<Box<Expression>, ()> {
