@@ -4,6 +4,6 @@ use crate::lox_instructions::expression::Expression;
 #[derive(PartialEq)]
 #[derive(Clone)]
 pub enum Statement {
-    Expr(Expression),
-    Print(Expression),
+    Expr(Box<Expression>),
+    Print(Box<Expression>),
 }

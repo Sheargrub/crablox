@@ -7,7 +7,8 @@ use lox_scanner::*;
 use crate::lox_parser::token as lox_token;
 use lox_token::*;
 
-use crate::lox_instructions::{expression as lox_expression, node as lox_node};
+use crate::lox_instructions::{statement as lox_statement, expression as lox_expression, node as lox_node};
+use lox_statement::Statement;
 use lox_expression::Expression;
 use lox_node::*;
 
@@ -16,7 +17,7 @@ use crate::lox_error;
 pub struct LoxParser {
     tokens: Vec<Token>,
     error_strings: Vec<String>,
-    output: Expression,
+    output: Vec<Statement>,
     current: usize,
     line: usize,
     inited: bool,
@@ -29,7 +30,7 @@ impl LoxParser {
     pub fn new() -> LoxParser {
         let tokens = Vec::new();
         let error_strings = Vec::new();
-        let output = Expression::LExp(Literal::Nil);
+        let output = Vec::new();
         let current = 0;
         let line = 1;
         let inited = false;
@@ -52,7 +53,10 @@ impl LoxParser {
 
     pub fn load_token_vec(&mut self, tokens: Vec<Token>) {
         self.tokens = tokens;
-        if self.inited && !self.valid { self.error_strings = Vec::new(); }
+        if self.inited && !self.valid { 
+            self.error_strings = Vec::new();
+            self.output = Vec::new();
+        }
         self.current = 0;
         self.line = 1;
         self.valid = true;
@@ -60,19 +64,52 @@ impl LoxParser {
         self.loaded = false;
     }
 
-    pub fn parse(&mut self) -> Result<Expression, Vec<String>> {
+    pub fn parse(&mut self) -> Result<Vec<Statement>, Vec<String>> {
         if self.inited && !self.loaded {
             self.loaded = true;
-            let result = self.expression();
-            match result {
-                Ok(b) => self.output = *b,
-                Err(()) => self.valid = false,
+
+            while !self.is_at_end() && self.peek().unwrap().data != TokenData::EndOfFile {
+                let r = self.statement();
+                match r {
+                    Ok(st) => self.output.push(st),
+                    Err(()) => self.valid = false,
+                }
             }
         }
 
         if !self.loaded { Err(vec![String::from("Error: parser has not recieved input.")]) }
         else if self.valid { Ok(self.output.clone()) }
         else { Err(self.error_strings.clone()) }
+    }
+
+    fn statement(&mut self) -> Result<Statement, ()> {
+        let next = self.peek();
+        if let Some(t) = next {
+            Ok(match t.data {
+                TokenData::Print => {
+                    let e = self.handle_unary_statement()?;
+                    Statement::Print(e)
+                }
+    
+                _ => { // Expression statement
+                    let e = self.handle_unary_statement()?;
+                    Statement::Expr(e)
+                },
+            })
+        } else {
+            self.add_error("Attempted to read a statement while no tokens were present.");
+            Err(())
+        }
+    }
+
+    fn handle_unary_statement(&mut self) -> Result<Box<Expression>, ()> {
+        let e = self.expression()?;
+        let sc = self.consume()?;
+        if let TokenData::Semicolon = sc.data { Ok(e) }
+        else {
+            self.add_error("Expected ';' at end of expression.");
+            Err(())
+        }
     }
 
     fn expression(&mut self) -> Result<Box<Expression>, ()> {
@@ -335,11 +372,11 @@ mod tests {
     fn test_expression_generic(test_str: &str, expected: Box<Expression>) {
         let mut parser = LoxParser::new();
         parser.load_string(test_str).expect("Error while scanning input string.");
-        let result = parser.parse().expect("Error while parsing expression.");
+        let result = parser.expression().expect("Error while parsing expression.");
         // TODO: set up this handler to print out the errors from the parser
 
         assert_eq!(
-            *expected,
+            expected,
             result,
             "Expected to recieve left side; recieved right."
         );

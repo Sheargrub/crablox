@@ -1,5 +1,6 @@
 use crate::lox_parser::*;
-use crate::lox_instructions::{expression as lox_expression, node as lox_node};
+use crate::lox_instructions::{statement as lox_statement, expression as lox_expression, node as lox_node};
+use lox_statement::Statement;
 use lox_expression::Expression;
 use lox_expression::Expression::*;
 use lox_node::*;
@@ -88,7 +89,12 @@ mod tests {
         use crate::lox_parser::*;
         let mut parser = LoxParser::new();
         parser.load_string(s).expect("Error while scanning input string.");
-        parser.parse().expect("Error while parsing expression.")
+        let statements = parser.parse().expect("Error while parsing expression.");
+        if let Statement::Expr(e) = statements[0].clone() { // TODO: refactor to remove clone call
+            *e
+        } else {
+            panic!("Attempted to convert a non-statement to an expression.");
+        }
     }
 
     fn test_expression_generic(s: &str, expected: Literal) {
@@ -126,12 +132,12 @@ mod tests {
 
         #[test]
         fn test_expression_unary_not() {
-            test_expression_generic("!!false", Boolean(false));
+            test_expression_generic("!!false;", Boolean(false));
         }
 
         #[test]
         fn test_expression_unary_negative() {
-            test_expression_generic("-4.3", Number(-4.3));
+            test_expression_generic("-4.3;", Number(-4.3));
         }
     }
 
@@ -140,57 +146,57 @@ mod tests {
 
         #[test]
         fn test_expression_modulo() {
-            test_expression_generic("5 % 3", Number(2.0));
+            test_expression_generic("5 % 3;", Number(2.0));
         }
 
         #[test]
         fn test_expression_divide() {
-            test_expression_generic("3/5", Number(0.6));
+            test_expression_generic("3/5;", Number(0.6));
         }
 
         #[test]
         fn test_expression_multiply() {
-            test_expression_generic("4.1 * 5", Number(20.5));
+            test_expression_generic("4.1 * 5;", Number(20.5));
         }
 
         #[test]
         fn test_expression_add() {
-            test_expression_generic("4.1 + 5", Number(9.1));
+            test_expression_generic("4.1 + 5;", Number(9.1));
         }
 
         #[test]
         fn test_expression_subtract() {
-            test_expression_generic("4.1 - 5", Number(4.1-5.0));
+            test_expression_generic("4.1 - 5;", Number(4.1-5.0));
         }
 
         #[test]
         fn test_expression_less() {
-            test_expression_generic("4.1 < 5", Boolean(true));
+            test_expression_generic("4.1 < 5;", Boolean(true));
         }
 
         #[test]
         fn test_expression_less_equal() {
-            test_expression_generic("4.1 <= 5", Boolean(true));
+            test_expression_generic("4.1 <= 5;", Boolean(true));
         }
 
         #[test]
         fn test_expression_greater() {
-            test_expression_generic("4.1 > 5", Boolean(false));
+            test_expression_generic("4.1 > 5;", Boolean(false));
         }
 
         #[test]
         fn test_expression_greater_equal() {
-            test_expression_generic("4.1 >= 5", Boolean(false));
+            test_expression_generic("4.1 >= 5;", Boolean(false));
         }
 
         #[test]
         fn test_expression_equal() {
-            test_expression_generic("4.1 == 5", Boolean(false));
+            test_expression_generic("4.1 == 5;", Boolean(false));
         }
 
         #[test]
         fn test_expression_not_equal() {
-            test_expression_generic("4.1 != 5", Boolean(true));
+            test_expression_generic("4.1 != 5;", Boolean(true));
         }
     }
 
@@ -199,19 +205,19 @@ mod tests {
 
         #[test]
         fn test_expression_math_ops() {
-            let test_str = "3 + -4 * -5 - 6";
+            let test_str = "3 + -4 * -5 - 6;";
             test_expression_generic(test_str, Number(17.0));
         }
 
         #[test]
         fn test_expression_comparison() {
-            let test_str = "15 / 5 >= 2 != 1.5 + 1.5 < 2";
+            let test_str = "15 / 5 >= 2 != 1.5 + 1.5 < 2;";
             test_expression_generic(test_str, Boolean(true));
         }
 
         #[test]
         fn test_expression_grouping() {
-            let test_str = "(3 + -4) * (-5 - 6)";
+            let test_str = "(3 + -4) * (-5 - 6);";
             test_expression_generic(test_str, Number(11.0));
         }
     }
