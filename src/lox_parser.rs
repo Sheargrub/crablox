@@ -13,10 +13,13 @@ use lox_expression::Expression;
 use lox_expression::node as lox_node;
 use lox_node::*;
 
+use crate::lox_error;
+
 struct LoxParser {
     tokens: Vec<Token>,
     error_strings: Vec<String>,
     current: usize,
+    line: usize,
     inited: bool,
     valid: bool,
 }
@@ -27,9 +30,10 @@ impl LoxParser {
         let tokens = Vec::new();
         let error_strings = Vec::new();
         let current = 0;
+        let line = 1;
         let inited = false;
         let valid = true;
-        LoxParser{tokens, error_strings, current, inited, valid}
+        LoxParser{tokens, error_strings, current, line, inited, valid}
     }
 
     pub fn load_string(&mut self, s: &str) -> Result<(), Vec<String>> {
@@ -48,6 +52,7 @@ impl LoxParser {
         self.tokens = tokens;
         if self.inited && !self.valid { self.error_strings = Vec::new(); }
         self.current = 0;
+        self.line = 1;
         self.valid = true;
         self.inited = true;
     }
@@ -59,31 +64,30 @@ impl LoxParser {
     */
 
     fn expression(&mut self) -> Result<Box<Expression>, ()> {
-        let t = self.consume_unsafe();
-        let expr = self.equality(t).expect("Unhandled exception.");
-        Ok(expr)
+        let t = self.consume()?;
+        Ok(self.equality(t)?)
     }
 
     fn equality(&mut self, t: Token) -> Result<Box<Expression>, ()> {
-        let mut e = self.comparison(t).expect("Unhandled exception.");
+        let mut e = self.comparison(t)?;
         loop {
             match self.peek() {
                 Some(Token { data: TokenData::BangEqual, line: _ }) => {
-                    self.consume().expect("Match statement should prevent None values");
-                    let right = self.consume_unsafe();
+                    self.consume()?;
+                    let right = self.consume()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::NotEqual,
-                        self.comparison(right).expect("Unhandled exception."),
+                        self.comparison(right)?,
                     )
                 },
                 Some(Token { data: TokenData::EqualEqual, line: _ }) => {
-                    self.consume().expect("Match statement should prevent None values");
-                    let right = self.consume_unsafe();
+                    self.consume()?;
+                    let right = self.consume()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Equal,
-                        self.comparison(right).expect("Unhandled exception."),
+                        self.comparison(right)?,
                     )
                 },
                 _ => break,
@@ -93,43 +97,43 @@ impl LoxParser {
     }
 
     fn comparison(&mut self, t: Token) -> Result<Box<Expression>, ()> {
-        let mut e = self.term(t).expect("Unhandled exception.");
+        let mut e = self.term(t)?;
         loop {
             match self.peek() {
                 Some(Token { data: TokenData::Less, line: _ }) => {
-                    self.consume().expect("Match statement should prevent None values");
-                    let right = self.consume_unsafe();
+                    self.consume()?;
+                    let right = self.consume()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Less,
-                        self.term(right).expect("Unhandled exception."),
+                        self.term(right)?,
                     )
                 },
                 Some(Token { data: TokenData::LessEqual, line: _ }) => {
-                    self.consume().expect("Match statement should prevent None values");
-                    let right = self.consume_unsafe();
+                    self.consume()?;
+                    let right = self.consume()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::LessEqual,
-                        self.term(right).expect("Unhandled exception."),
+                        self.term(right)?,
                     )
                 },
                 Some(Token { data: TokenData::Greater, line: _ }) => {
-                    self.consume().expect("Match statement should prevent None values");
-                    let right = self.consume_unsafe();
+                    self.consume()?;
+                    let right = self.consume()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Greater,
-                        self.term(right).expect("Unhandled exception."),
+                        self.term(right)?,
                     )
                 },
                 Some(Token { data: TokenData::GreaterEqual, line: _ }) => {
-                    self.consume().expect("Match statement should prevent None values");
-                    let right = self.consume_unsafe();
+                    self.consume()?;
+                    let right = self.consume()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::GreaterEqual,
-                        self.term(right).expect("Unhandled exception."),
+                        self.term(right)?,
                     )
                 },
                 _ => break,
@@ -139,25 +143,25 @@ impl LoxParser {
     }
 
     fn term(&mut self, t: Token) -> Result<Box<Expression>, ()> {
-        let mut e = self.factor(t).expect("Unhandled exception.");
+        let mut e = self.factor(t)?;
         loop {
             match self.peek() {
                 Some(Token { data: TokenData::Minus, line: _ }) => {
-                    self.consume().expect("Match statement should prevent None values");
-                    let right = self.consume_unsafe();
+                    self.consume()?;
+                    let right = self.consume()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Subtract,
-                        self.factor(right).expect("Unhandled exception."),
+                        self.factor(right)?,
                     )
                 },
                 Some(Token { data: TokenData::Plus, line: _ }) => {
-                    self.consume().expect("Match statement should prevent None values");
-                    let right = self.consume_unsafe();
+                    self.consume()?;
+                    let right = self.consume()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Add,
-                        self.factor(right).expect("Unhandled exception."),
+                        self.factor(right)?,
                     )
                 },
                 _ => break,
@@ -167,34 +171,34 @@ impl LoxParser {
     }
 
     fn factor(&mut self, t: Token) -> Result<Box<Expression>, ()> {
-        let mut e = self.unary(t).expect("Unhandled exception.");
+        let mut e = self.unary(t)?;
         loop {
             match self.peek() {
                 Some(Token { data: TokenData::Percent, line: _ }) => {
-                    self.consume().expect("Match statement should prevent None values");
-                    let right = self.consume_unsafe();
+                    self.consume()?;
+                    let right = self.consume()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Modulo,
-                        self.unary(right).expect("Unhandled exception."),
+                        self.unary(right)?,
                     );
                 },
                 Some(Token { data: TokenData::Slash, line: _ }) => {
-                    self.consume().expect("Match statement should prevent None values");
-                    let right = self.consume_unsafe();
+                    self.consume()?;
+                    let right = self.consume()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Divide,
-                        self.unary(right).expect("Unhandled exception."),
+                        self.unary(right)?,
                     );
                 },
                 Some(Token { data: TokenData::Star, line: _ }) => {
-                    self.consume().expect("Match statement should prevent None values");
-                    let right = self.consume_unsafe();
+                    self.consume()?;
+                    let right = self.consume()?;
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Multiply,
-                        self.unary(right).expect("Unhandled exception."),
+                        self.unary(right)?,
                     );
                 },
                 _ => break,
@@ -206,16 +210,16 @@ impl LoxParser {
     fn unary(&mut self, t: Token) -> Result<Box<Expression>, ()> {
         match t.data {
             TokenData::Bang => {
-                let arg = self.consume_unsafe();
-                let u = self.unary(arg).expect("Unhandled exception.");
+                let arg = self.consume()?;
+                let u = self.unary(arg)?;
                 Ok(Expression::boxed_not(u))
             },
             TokenData::Minus => {
-                let arg = self.consume_unsafe();
-                let u = self.unary(arg).expect("Unhandled exception.");
+                let arg = self.consume()?;
+                let u = self.unary(arg)?;
                 Ok(Expression::boxed_negative(u))
             },
-            _ => Ok(self.primary(t).expect("Unhandled exception.")),
+            _ => Ok(self.primary(t)?),
         }
     }
 
@@ -228,26 +232,34 @@ impl LoxParser {
             TokenData::Nil => Ok(Expression::boxed_nil()),
 
             TokenData::LeftParen => {
-                let e = self.expression().expect("Unhandled exception.");
+                let e = self.expression()?;
                 if !self.is_at_end() {
                     if let Some(Token{ data: TokenData::RightParen, line: _ }) = self.peek() {
-                        self.consume_unsafe();
+                        self.consume()?;
+                        Ok(Expression::boxed_grouping(e))
                     } else {
-                        panic!("Unhandled exception: missing close paren.")
+                        self.add_error("Missing close parenthesis.");
+                        Err(())
                     }
                 } else {
-                    panic!("Unhandled exception: missing close paren.")
+                    self.add_error("Ran out of tokens unexpectedly. (This likely indicates a scanner bug.)");
+                    Err(())
                 }
-                Ok(Expression::boxed_grouping(e))
+                
             },
 
-            TokenData::EndOfFile => panic!("Unhandled exception: reached end of file unexpectedly."),
+            TokenData::EndOfFile => {
+                self.add_error("Unterminated expression.");
+                Err(())
+            },
             _ => {
-                panic!("Unhandled exception: reached impossible state while parsing tokens.");
+                self.add_error("Reached impossible state while parsing tokens. (This likely indicates a parser bug.)");
+                Err(())
             },
         }
     }
 
+    // Can be safely called while at end of file.
     fn peek(&self) -> Option<Token> {
         if !self.is_at_end() {
             let t = self.tokens[self.current].clone();
@@ -256,22 +268,27 @@ impl LoxParser {
         else { None }
     }
 
-    // This is a stopgap! Uses of this should be refactored
-    fn consume_unsafe(&mut self) -> Token {
-        self.consume().expect("Unhandled exception: reached end of token stream early.")
-    }
-
-    fn consume(&mut self) -> Option<Token> {
+    // Will trigger error detection at end of file.
+    fn consume(&mut self) -> Result<Token, ()> {
         if !self.is_at_end() {
             let t = self.tokens[self.current].clone();
+            self.line = t.line;
             self.current += 1;
-            Some(t)
+            Ok(t)
         }
-        else { None }
+        else { 
+            self.add_error("Ran out of tokens unexpectedly. (This likely indicates a scanner bug.)");
+            Err(())
+        }
     }
 
     fn is_at_end(&self) -> bool {
         self.current >= self.tokens.len()
+    }
+
+    fn add_error(&mut self, message: &str) {
+        self.error_strings.push(lox_error::new_error_string(self.line, message));
+        self.valid = false;
     }
 
 }
