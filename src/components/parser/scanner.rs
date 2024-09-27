@@ -1,4 +1,4 @@
-use crate::lox_envs::components as lox;
+use crate::components as lox;
 use lox::parser::token::*;
 
 pub struct LoxScanner {

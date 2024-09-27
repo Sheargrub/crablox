@@ -1,9 +1,12 @@
-pub mod lox_envs {
-    pub mod program;
-    mod components;
+pub mod program;
+mod components{
+    pub mod instructions;
+    pub mod parser;
+    pub mod interpreter;
+    pub mod error;
 }
 
-use crate::lox_envs::program::*;
+use crate::program::*;
 
 pub fn run_file(file_name: &str) {
     println!("Planning to run file {}.", file_name);

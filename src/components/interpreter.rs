@@ -1,4 +1,4 @@
-use crate::lox_envs::components as lox;
+use crate::components as lox;
 use lox::instructions::{statement, expression, node};
 use statement::Statement;
 use expression::Expression;

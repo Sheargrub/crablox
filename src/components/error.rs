@@ -5,7 +5,7 @@ pub fn new_error_string(line: usize, message: &str) -> String {
 
 #[cfg(test)]
 mod error_tests {
-    use crate::lox_envs::components as lox;
+    use crate::components as lox;
 
     #[test]
     fn generate_err_test () {

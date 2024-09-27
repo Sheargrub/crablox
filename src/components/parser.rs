@@ -1,7 +1,7 @@
 mod token;
 mod scanner;
 
-use crate::lox_envs::components as lox;
+use crate::components as lox;
 
 use lox::parser::scanner as lox_scanner;
 use lox_scanner::*;

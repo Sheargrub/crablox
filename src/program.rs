@@ -1,7 +1,7 @@
 use std::fs;
 use std::error::Error;
 
-use crate::lox_envs::components as lox;
+use crate::components as lox;
 use lox::interpreter::*;
 use lox::parser::*;
 
