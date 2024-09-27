@@ -58,7 +58,7 @@ impl LoxParser {
     }
 
     /*
-    pub fn parse_string(&mut self, tokens: <Vec<Token>>) -> Result<Expression, Vec<String>> {
+    pub fn parse(&mut self, tokens: <Vec<Token>>) -> Result<Expression, Vec<String>> {
         let mut current = 0;
     }
     */
@@ -249,11 +249,11 @@ impl LoxParser {
             },
 
             TokenData::EndOfFile => {
-                self.add_error("Unterminated expression.");
+                self.add_error("Expected an expression; reached end of file.");
                 Err(())
             },
             _ => {
-                self.add_error("Reached impossible state while parsing tokens. (This likely indicates a parser bug.)");
+                self.add_error(&format!("Expected an expression; recieved {:?}.", t.data));
                 Err(())
             },
         }
