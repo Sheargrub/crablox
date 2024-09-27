@@ -87,6 +87,7 @@ impl LoxParser {
         if let Some(t) = next {
             Ok(match t.data {
                 TokenData::Print => {
+                    self.consume().expect("If-let condition should guarantee consume()");
                     let e = self.handle_unary_statement()?;
                     Statement::Print(e)
                 }

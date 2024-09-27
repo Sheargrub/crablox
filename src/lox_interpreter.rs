@@ -6,7 +6,7 @@ use lox_expression::Expression::*;
 use lox_node::*;
 use lox_node::Literal::*;
 
-struct LoxInterpreter {
+pub struct LoxInterpreter {
 
 }
 
@@ -15,9 +15,28 @@ impl LoxInterpreter {
         LoxInterpreter{}
     }
 
-    pub fn evaluate_stmt(&self, s: Statement) -> Result<Literal, String> {
+    pub fn interpret(&self, program: Vec<Statement>) {
+        for s in program {
+            let result = self.evaluate_stmt(s);
+            if let Err(e) = result {
+                println!("{}", e);
+                break;
+            }
+        }
+    }
+
+    pub fn evaluate_stmt(&self, s: Statement) -> Result<(), String> {
+        use Statement::*;
         match s {
-            _ => Err(String::new()) // temp
+            Print(e) => {
+                // TODO: I'd like to get a proper std_out working
+                println!("{:?}", self.evaluate_expr(*e)?);
+                Ok(())
+            },
+            Expr(e) => {
+                self.evaluate_expr(*e)?;
+                Ok(())
+            },
         }
     }
 
