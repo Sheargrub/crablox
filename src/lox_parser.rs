@@ -64,130 +64,142 @@ impl LoxParser {
     }
 
     fn equality(&mut self, t: Token) -> Box<Expression> {
-        let e = self.comparison(t);
-        match self.peek() {
-            Some(Token { data: TokenData::BangEqual, line: _ }) => {
-                self.consume_unsafe();
-                let right_t = self.consume_unsafe();
-                Box::new(Expression::new_binary(
-                    e,
-                    BinaryOp::NotEqual,
-                    self.equality(right_t),
-                ))
-            },
-            Some(Token { data: TokenData::EqualEqual, line: _ }) => {
-                self.consume_unsafe();
-                let right_t = self.consume_unsafe();
-                Box::new(Expression::new_binary(
-                    e,
-                    BinaryOp::NotEqual,
-                    self.equality(right_t),
-                ))
-            },
-            _ => e,
+        let mut e = self.comparison(t);
+        loop {
+            match self.peek() {
+                Some(Token { data: TokenData::BangEqual, line: _ }) => {
+                    self.consume().expect("Match statement should prevent None values");
+                    let right = self.consume_unsafe();
+                    e = Box::new(Expression::new_binary(
+                        e,
+                        BinaryOp::NotEqual,
+                        self.comparison(right),
+                    ))
+                },
+                Some(Token { data: TokenData::EqualEqual, line: _ }) => {
+                    self.consume().expect("Match statement should prevent None values");
+                    let right = self.consume_unsafe();
+                    e = Box::new(Expression::new_binary(
+                        e,
+                        BinaryOp::Equal,
+                        self.comparison(right),
+                    ))
+                },
+                _ => break,
+            };
         }
+        e
     }
 
     fn comparison(&mut self, t: Token) -> Box<Expression> {
-        let e = self.term(t);
-        match self.peek() {
-            Some(Token { data: TokenData::Less, line: _ }) => {
-                self.consume_unsafe();
-                let right_t = self.consume_unsafe();
-                Box::new(Expression::new_binary(
-                    e,
-                    BinaryOp::Less,
-                    self.comparison(right_t),
-                ))
-            },
-            Some(Token { data: TokenData::LessEqual, line: _ }) => {
-                self.consume_unsafe();
-                let right_t = self.consume_unsafe();
-                Box::new(Expression::new_binary(
-                    e,
-                    BinaryOp::LessEqual,
-                    self.comparison(right_t),
-                ))
-            },
-            Some(Token { data: TokenData::Greater, line: _ }) => {
-                self.consume_unsafe();
-                let right_t = self.consume_unsafe();
-                Box::new(Expression::new_binary(
-                    e,
-                    BinaryOp::Greater,
-                    self.comparison(right_t),
-                ))
-            },
-            Some(Token { data: TokenData::GreaterEqual, line: _ }) => {
-                self.consume_unsafe();
-                let right_t = self.consume_unsafe();
-                Box::new(Expression::new_binary(
-                    e,
-                    BinaryOp::GreaterEqual,
-                    self.comparison(right_t),
-                ))
-            },
-            _ => e,
+        let mut e = self.term(t);
+        loop {
+            match self.peek() {
+                Some(Token { data: TokenData::Less, line: _ }) => {
+                    self.consume().expect("Match statement should prevent None values");
+                    let right = self.consume_unsafe();
+                    e = Box::new(Expression::new_binary(
+                        e,
+                        BinaryOp::Less,
+                        self.term(right),
+                    ))
+                },
+                Some(Token { data: TokenData::LessEqual, line: _ }) => {
+                    self.consume().expect("Match statement should prevent None values");
+                    let right = self.consume_unsafe();
+                    e = Box::new(Expression::new_binary(
+                        e,
+                        BinaryOp::LessEqual,
+                        self.term(right),
+                    ))
+                },
+                Some(Token { data: TokenData::Greater, line: _ }) => {
+                    self.consume().expect("Match statement should prevent None values");
+                    let right = self.consume_unsafe();
+                    e = Box::new(Expression::new_binary(
+                        e,
+                        BinaryOp::Greater,
+                        self.term(right),
+                    ))
+                },
+                Some(Token { data: TokenData::GreaterEqual, line: _ }) => {
+                    self.consume().expect("Match statement should prevent None values");
+                    let right = self.consume_unsafe();
+                    e = Box::new(Expression::new_binary(
+                        e,
+                        BinaryOp::GreaterEqual,
+                        self.term(right),
+                    ))
+                },
+                _ => break,
+            };
         }
+        e
     }
 
     fn term(&mut self, t: Token) -> Box<Expression> {
-        let e = self.factor(t);
-        match self.peek() {
-            Some(Token { data: TokenData::Minus, line: _ }) => {
-                self.consume_unsafe();
-                let right_t = self.consume_unsafe();
-                Box::new(Expression::new_binary(
-                    e,
-                    BinaryOp::Subtract,
-                    self.term(right_t),
-                ))
-            },
-            Some(Token { data: TokenData::Plus, line: _ }) => {
-                self.consume_unsafe();
-                let right_t = self.consume_unsafe();
-                Box::new(Expression::new_binary(
-                    e,
-                    BinaryOp::Add,
-                    self.term(right_t),
-                ))
-            },
-            _ => e,
+        let mut e = self.factor(t);
+        loop {
+            match self.peek() {
+                Some(Token { data: TokenData::Minus, line: _ }) => {
+                    self.consume().expect("Match statement should prevent None values");
+                    let right = self.consume_unsafe();
+                    e = Box::new(Expression::new_binary(
+                        e,
+                        BinaryOp::Subtract,
+                        self.factor(right),
+                    ))
+                },
+                Some(Token { data: TokenData::Plus, line: _ }) => {
+                    self.consume().expect("Match statement should prevent None values");
+                    let right = self.consume_unsafe();
+                    e = Box::new(Expression::new_binary(
+                        e,
+                        BinaryOp::Add,
+                        self.factor(right),
+                    ))
+                },
+                _ => break,
+            };
         }
+        e
     }
 
     fn factor(&mut self, t: Token) -> Box<Expression> {
-        let e = self.unary(t);
-        match self.peek() {
-            Some(Token { data: TokenData::Percent, line: _ }) => {
-                self.consume_unsafe();
-                let right_t = self.consume_unsafe();
-                Box::new(Expression::new_binary(
-                    e,
-                    BinaryOp::Modulo,
-                    self.factor(right_t),
-                ))
-            },
-            Some(Token { data: TokenData::Slash, line: _ }) => {
-                self.consume_unsafe();
-                let right_t = self.consume_unsafe();
-                Box::new(Expression::new_binary(
-                    e,
-                    BinaryOp::Divide,
-                    self.factor(right_t),
-                ))
-            },
-            Some(Token { data: TokenData::Star, line: _ }) => {
-                self.consume_unsafe();
-                let right_t = self.consume_unsafe();
-                Box::new(Expression::new_binary(
-                    e,
-                    BinaryOp::Multiply,
-                    self.factor(right_t),
-                ))
-            },
-            _ => e,
+        let mut e = self.unary(t);
+        loop {
+            match self.peek() {
+                Some(Token { data: TokenData::Percent, line: _ }) => {
+                    self.consume().expect("Match statement should prevent None values");
+                    let right = self.consume_unsafe();
+                    e = Box::new(Expression::new_binary(
+                        e,
+                        BinaryOp::Modulo,
+                        self.unary(right),
+                    ));
+                },
+                Some(Token { data: TokenData::Slash, line: _ }) => {
+                    self.consume().expect("Match statement should prevent None values");
+                    let right = self.consume_unsafe();
+                    e = Box::new(Expression::new_binary(
+                        e,
+                        BinaryOp::Divide,
+                        self.unary(right),
+                    ));
+                },
+                Some(Token { data: TokenData::Star, line: _ }) => {
+                    self.consume().expect("Match statement should prevent None values");
+                    let right = self.consume_unsafe();
+                    e = Box::new(Expression::new_binary(
+                        e,
+                        BinaryOp::Multiply,
+                        self.unary(right),
+                    ));
+                },
+                _ => break,
+            };
         }
+        e
     }
 
     fn unary(&mut self, t: Token) -> Box<Expression> {
@@ -359,19 +371,112 @@ mod tests {
 
     #[test]
     fn test_expression_math_ops() {
-        let test_str = "3 + 4 * 5 - 6";
+        let test_str = "3 + -4 * -5 - 6";
         let expected = Expression::new_binary(
             Box::new(Expression::new_binary(
                 Box::new(Expression::new_number(3.0)),
                 BinaryOp::Add,
                 Box::new(Expression::new_binary(
-                    Box::new(Expression::new_number(4.0)),
+                    Box::new(Expression::new_negative(Box::new(Expression::new_number(4.0)))),
                     BinaryOp::Multiply,
-                    Box::new(Expression::new_number(5.0)),
+                    Box::new(Expression::new_negative(Box::new(Expression::new_number(5.0)))),
                 )),
             )),
             BinaryOp::Subtract,
             Box::new(Expression::new_number(6.0)),
+        );
+        test_expression_generic(test_str, expected);
+    }
+
+    #[test]
+    fn test_expression_less() {
+        let test_str = "4.1 < 5";
+        let expected = Expression::new_binary(
+            Box::new(Expression::new_number(4.1)),
+            BinaryOp::Less,
+            Box::new(Expression::new_number(5.0)),
+        );
+        test_expression_generic(test_str, expected);
+    }
+
+    #[test]
+    fn test_expression_less_equal() {
+        let test_str = "4.1 <= 5";
+        let expected = Expression::new_binary(
+            Box::new(Expression::new_number(4.1)),
+            BinaryOp::LessEqual,
+            Box::new(Expression::new_number(5.0)),
+        );
+        test_expression_generic(test_str, expected);
+    }
+
+    #[test]
+    fn test_expression_greater() {
+        let test_str = "4.1 > 5";
+        let expected = Expression::new_binary(
+            Box::new(Expression::new_number(4.1)),
+            BinaryOp::Greater,
+            Box::new(Expression::new_number(5.0)),
+        );
+        test_expression_generic(test_str, expected);
+    }
+
+    #[test]
+    fn test_expression_greater_equal() {
+        let test_str = "4.1 >= 5";
+        let expected = Expression::new_binary(
+            Box::new(Expression::new_number(4.1)),
+            BinaryOp::GreaterEqual,
+            Box::new(Expression::new_number(5.0)),
+        );
+        test_expression_generic(test_str, expected);
+    }
+
+    #[test]
+    fn test_expression_equal() {
+        let test_str = "4.1 == 5";
+        let expected = Expression::new_binary(
+            Box::new(Expression::new_number(4.1)),
+            BinaryOp::Equal,
+            Box::new(Expression::new_number(5.0)),
+        );
+        test_expression_generic(test_str, expected);
+    }
+
+    #[test]
+    fn test_expression_not_equal() {
+        let test_str = "4.1 != 5";
+        let expected = Expression::new_binary(
+            Box::new(Expression::new_number(4.1)),
+            BinaryOp::NotEqual,
+            Box::new(Expression::new_number(5.0)),
+        );
+        test_expression_generic(test_str, expected);
+    }
+
+    #[test]
+    fn test_expression_comparison() {
+        let test_str = "15 % 5 >= 2 != 1.5 + 1.5 < 2";
+        let expected = Expression::new_binary(
+            Box::new(Expression::new_binary(
+                Box::new(Expression::new_binary(
+                    Box::new(Expression::new_number(15.0)),
+                    BinaryOp::Modulo,
+                    Box::new(Expression::new_number(5.0)),
+                )),
+                BinaryOp::GreaterEqual,
+                Box::new(Expression::new_number(2.0)),
+            )),
+            BinaryOp::NotEqual,
+            Box::new(Expression::new_binary(
+                Box::new(Expression::new_binary(
+                    Box::new(Expression::new_number(1.5)),
+                    BinaryOp::Add,
+                    Box::new(Expression::new_number(1.5)),
+                )),
+                BinaryOp::Less,
+                Box::new(Expression::new_number(2.0)),
+            )),
         );
         test_expression_generic(test_str, expected);
     }
