@@ -16,6 +16,10 @@ use lox_node::Literal::*;
 use lox_node::Unary::*;
 impl Expression {
 
+    pub fn boxed_literal(l: Literal) -> Box<Expression> {
+        Box::new(LExp(l))
+    }
+
     pub fn boxed_number(n: f64) -> Box<Expression> {
         Box::new(LExp(Number(n)))
     }
@@ -23,8 +27,7 @@ impl Expression {
         Box::new(LExp(StringData(String::from(s))))
     }
     pub fn boxed_bool(b: bool) -> Box<Expression> {
-        if b { Box::new(LExp(True)) }
-        else { Box::new(LExp(False)) }
+        Box::new(LExp(Boolean(b)))
     }
     pub fn boxed_nil() -> Box<Expression> {
         Box::new(LExp(Nil))

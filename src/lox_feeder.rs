@@ -15,12 +15,8 @@ impl LoxFeeder {
         Ok(LoxFeeder{instructions, interpreter})
     }
 
-    pub fn get_source<'a>(&'a self) -> &'a String {
-        &self.instructions
-    }
-
     // Temporary hedge against interpreter errors.
-    pub fn dummy_call<'a>(&'a self) -> &'a String {
-        &self.interpreter.get_instruction()
+    pub fn dummy_call(self) {
+        println!("Hello world!")
     }
 }

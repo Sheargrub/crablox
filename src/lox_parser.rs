@@ -13,7 +13,7 @@ use lox_node::*;
 
 use crate::lox_error;
 
-struct LoxParser {
+pub struct LoxParser {
     tokens: Vec<Token>,
     error_strings: Vec<String>,
     current: usize,

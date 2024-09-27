@@ -5,8 +5,7 @@ use crate::lox_instructions::expression::Expression;
 pub enum Literal {
     Number(f64),
     StringData(String),
-    True,
-    False,
+    Boolean(bool),
     Nil,
 }
 
