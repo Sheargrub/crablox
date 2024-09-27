@@ -1,7 +1,5 @@
-pub mod node;
-
-use crate::lox_parser::expression as lox_expression;
-use lox_expression::node as lox_node;
+use crate::lox_instructions::expression as lox_expression;
+use crate::lox_instructions::node as lox_node;
 use lox_node::*;
 
 #[derive(Debug)]

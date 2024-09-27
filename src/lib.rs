@@ -1,4 +1,5 @@
 
+pub mod lox_instructions;
 pub mod lox_parser;
 pub mod lox_interpreter;
 pub mod lox_feeder;

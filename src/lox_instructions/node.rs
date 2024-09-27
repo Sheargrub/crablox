@@ -1,4 +1,4 @@
-use crate::lox_parser::expression::Expression;
+use crate::lox_instructions::expression::Expression;
 
 #[derive(Debug)]
 #[derive(PartialEq)]

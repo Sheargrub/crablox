@@ -1,4 +1,3 @@
-pub mod expression;
 mod token;
 mod scanner;
 
@@ -8,9 +7,8 @@ use lox_scanner::*;
 use crate::lox_parser::token as lox_token;
 use lox_token::*;
 
-use crate::lox_parser::expression as lox_expression;
+use crate::lox_instructions::{expression as lox_expression, node as lox_node};
 use lox_expression::Expression;
-use lox_expression::node as lox_node;
 use lox_node::*;
 
 use crate::lox_error;
