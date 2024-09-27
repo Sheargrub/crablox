@@ -58,13 +58,14 @@ impl LoxParser {
     }
     */
 
-    fn expression(&mut self) -> Box<Expression> {
+    fn expression(&mut self) -> Result<Box<Expression>, ()> {
         let t = self.consume_unsafe();
-        self.equality(t)
+        let expr = self.equality(t).expect("Unhandled exception.");
+        Ok(expr)
     }
 
-    fn equality(&mut self, t: Token) -> Box<Expression> {
-        let mut e = self.comparison(t);
+    fn equality(&mut self, t: Token) -> Result<Box<Expression>, ()> {
+        let mut e = self.comparison(t).expect("Unhandled exception.");
         loop {
             match self.peek() {
                 Some(Token { data: TokenData::BangEqual, line: _ }) => {
@@ -73,7 +74,7 @@ impl LoxParser {
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::NotEqual,
-                        self.comparison(right),
+                        self.comparison(right).expect("Unhandled exception."),
                     )
                 },
                 Some(Token { data: TokenData::EqualEqual, line: _ }) => {
@@ -82,17 +83,17 @@ impl LoxParser {
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Equal,
-                        self.comparison(right),
+                        self.comparison(right).expect("Unhandled exception."),
                     )
                 },
                 _ => break,
             };
         }
-        e
+        Ok(e)
     }
 
-    fn comparison(&mut self, t: Token) -> Box<Expression> {
-        let mut e = self.term(t);
+    fn comparison(&mut self, t: Token) -> Result<Box<Expression>, ()> {
+        let mut e = self.term(t).expect("Unhandled exception.");
         loop {
             match self.peek() {
                 Some(Token { data: TokenData::Less, line: _ }) => {
@@ -101,7 +102,7 @@ impl LoxParser {
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Less,
-                        self.term(right),
+                        self.term(right).expect("Unhandled exception."),
                     )
                 },
                 Some(Token { data: TokenData::LessEqual, line: _ }) => {
@@ -110,7 +111,7 @@ impl LoxParser {
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::LessEqual,
-                        self.term(right),
+                        self.term(right).expect("Unhandled exception."),
                     )
                 },
                 Some(Token { data: TokenData::Greater, line: _ }) => {
@@ -119,7 +120,7 @@ impl LoxParser {
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Greater,
-                        self.term(right),
+                        self.term(right).expect("Unhandled exception."),
                     )
                 },
                 Some(Token { data: TokenData::GreaterEqual, line: _ }) => {
@@ -128,17 +129,17 @@ impl LoxParser {
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::GreaterEqual,
-                        self.term(right),
+                        self.term(right).expect("Unhandled exception."),
                     )
                 },
                 _ => break,
             };
         }
-        e
+        Ok(e)
     }
 
-    fn term(&mut self, t: Token) -> Box<Expression> {
-        let mut e = self.factor(t);
+    fn term(&mut self, t: Token) -> Result<Box<Expression>, ()> {
+        let mut e = self.factor(t).expect("Unhandled exception.");
         loop {
             match self.peek() {
                 Some(Token { data: TokenData::Minus, line: _ }) => {
@@ -147,7 +148,7 @@ impl LoxParser {
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Subtract,
-                        self.factor(right),
+                        self.factor(right).expect("Unhandled exception."),
                     )
                 },
                 Some(Token { data: TokenData::Plus, line: _ }) => {
@@ -156,17 +157,17 @@ impl LoxParser {
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Add,
-                        self.factor(right),
+                        self.factor(right).expect("Unhandled exception."),
                     )
                 },
                 _ => break,
             };
         }
-        e
+        Ok(e)
     }
 
-    fn factor(&mut self, t: Token) -> Box<Expression> {
-        let mut e = self.unary(t);
+    fn factor(&mut self, t: Token) -> Result<Box<Expression>, ()> {
+        let mut e = self.unary(t).expect("Unhandled exception.");
         loop {
             match self.peek() {
                 Some(Token { data: TokenData::Percent, line: _ }) => {
@@ -175,7 +176,7 @@ impl LoxParser {
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Modulo,
-                        self.unary(right),
+                        self.unary(right).expect("Unhandled exception."),
                     );
                 },
                 Some(Token { data: TokenData::Slash, line: _ }) => {
@@ -184,7 +185,7 @@ impl LoxParser {
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Divide,
-                        self.unary(right),
+                        self.unary(right).expect("Unhandled exception."),
                     );
                 },
                 Some(Token { data: TokenData::Star, line: _ }) => {
@@ -193,41 +194,41 @@ impl LoxParser {
                     e = Expression::boxed_binary(
                         e,
                         BinaryOp::Multiply,
-                        self.unary(right),
+                        self.unary(right).expect("Unhandled exception."),
                     );
                 },
                 _ => break,
             };
         }
-        e
+        Ok(e)
     }
 
-    fn unary(&mut self, t: Token) -> Box<Expression> {
+    fn unary(&mut self, t: Token) -> Result<Box<Expression>, ()> {
         match t.data {
             TokenData::Bang => {
                 let arg = self.consume_unsafe();
-                let u = self.unary(arg);
-                Expression::boxed_not(u)
-            }
+                let u = self.unary(arg).expect("Unhandled exception.");
+                Ok(Expression::boxed_not(u))
+            },
             TokenData::Minus => {
                 let arg = self.consume_unsafe();
-                let u = self.unary(arg);
-                Expression::boxed_negative(u)
-            }
-            _ => self.primary(t)
+                let u = self.unary(arg).expect("Unhandled exception.");
+                Ok(Expression::boxed_negative(u))
+            },
+            _ => Ok(self.primary(t).expect("Unhandled exception.")),
         }
     }
 
-    fn primary(&mut self, t: Token) -> Box<Expression> {
+    fn primary(&mut self, t: Token) -> Result<Box<Expression>, ()> {
         match t.data {
-            TokenData::Number(n) => Expression::boxed_number(n),
-            TokenData::StringData(s) => Expression::boxed_string(&s),
-            TokenData::True => Expression::boxed_bool(true),
-            TokenData::False => Expression::boxed_bool(false),
-            TokenData::Nil => Expression::boxed_nil(),
+            TokenData::Number(n) => Ok(Expression::boxed_number(n)),
+            TokenData::StringData(s) => Ok(Expression::boxed_string(&s)),
+            TokenData::True => Ok(Expression::boxed_bool(true)),
+            TokenData::False => Ok(Expression::boxed_bool(false)),
+            TokenData::Nil => Ok(Expression::boxed_nil()),
 
             TokenData::LeftParen => {
-                let e = self.expression();
+                let e = self.expression().expect("Unhandled exception.");
                 if !self.is_at_end() {
                     if let Some(Token{ data: TokenData::RightParen, line: _ }) = self.peek() {
                         self.consume_unsafe();
@@ -237,7 +238,7 @@ impl LoxParser {
                 } else {
                     panic!("Unhandled exception: missing close paren.")
                 }
-                Expression::boxed_grouping(e)
+                Ok(Expression::boxed_grouping(e))
             },
 
             TokenData::EndOfFile => panic!("Unhandled exception: reached end of file unexpectedly."),
@@ -284,7 +285,8 @@ mod tests {
     fn test_expression_generic(test_str: &str, expected: Box<Expression>) {
         let mut parser = LoxParser::new();
         parser.load_string(test_str).expect("Failed to load test string.");
-        let result = parser.expression();
+        let result = parser.expression().expect("Error while parsing expression.");
+        // TODO: set up this handler to print out the errors from the parser
 
         assert_eq!(
             expected,
