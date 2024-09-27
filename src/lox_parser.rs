@@ -259,6 +259,27 @@ impl LoxParser {
         }
     }
 
+    fn synchronize(&mut self) {
+        while !self.is_at_end() {
+            let prev = self.consume().expect("While loop condition should guarantee consume()");
+            if let TokenData::Semicolon = prev.data { break; }
+            let next = self.peek();
+            if let Some(t) = next {
+                match t.data {
+                    TokenData::Class |
+                    TokenData::Fun |
+                    TokenData::Var |
+                    TokenData::For |
+                    TokenData::If |
+                    TokenData::While |
+                    TokenData::Print |
+                    TokenData::Return => break,
+                    _ => (),
+                }
+            };
+        }
+    }
+
     // Can be safely called while at end of file.
     fn peek(&self) -> Option<Token> {
         if !self.is_at_end() {
