@@ -10,8 +10,9 @@ pub enum Expression {
     LExp(Literal),
     UExp(Unary),
     BExp(Binary),
-    Grouping(Box<Expression>),
     Identifier(String),
+    Grouping(Box<Expression>),
+    Assignment(String, Box<Expression>),
 }
 
 use Expression::*;
@@ -48,11 +49,15 @@ impl Expression {
         Box::new(BExp(Binary{ left, operator, right }))
     }
 
-    pub fn boxed_grouping(e: Box<Expression>) -> Box<Expression> {
-        Box::new(Grouping(e))
-    }
     pub fn boxed_identifier(s: &str) -> Box<Expression> {
         Box::new(Identifier(String::from(s)))
     }
+    pub fn boxed_grouping(e: Box<Expression>) -> Box<Expression> {
+        Box::new(Grouping(e))
+    }
+    pub fn boxed_assignment(s: &str, e: Box<Expression>) -> Box<Expression> {
+        Box::new(Assignment(String::from(s), e))
+    }
+
 }
 

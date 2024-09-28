@@ -18,6 +18,17 @@ impl LoxEnvironment  {
         self.nodes[last].insert(String::from(name), value);
     }
 
+    pub fn assign(&mut self, name: &str, value: Literal) -> Result<Literal, String> {
+        let iter = self.nodes.iter_mut().rev();
+        for node in iter {
+            if node.contains_key(name) {
+                node.insert(String::from(name), value.clone());
+                return Ok(value);
+            }
+        }
+        Err(format!("Undefined variable {}.", name))
+    }
+
     pub fn get(&self, name: &str) -> Result<Literal, String> {
         let iter = self.nodes.iter().rev();
         for node in iter {
@@ -57,7 +68,27 @@ mod tests {
         assert_eq!(lit_in, lit_out, "Environment output a different value than was put in.");
     }
 
-    
+    #[test]
+    fn test_env_assignment() {
+        let mut env = LoxEnvironment::new();
+        env.define("clicheVar", Literal::Nil);
+        let lit_in = Literal::StringData(String::from("Hello world!"));
+        env.assign("clicheVar", lit_in.clone()).expect("Assignment failed");
+        let lit_out = env.get("clicheVar").expect("Read failed");
+        assert_eq!(lit_in, lit_out, "Environment output a different value than was put in.");
+    }
+
+    #[test]
+    fn test_env_assignment_undeclared() {
+        let mut env = LoxEnvironment::new();
+        env.assign("fake_var", Literal::Boolean(true));
+        let err_out = env.get("fakeVar");
+        if let Err(e) = err_out {
+            assert!(e.contains("Undefined variable"));
+        } else {
+            panic!("Unexpectedly recieved valid output.");
+        }
+    }
 
     #[test]
     fn test_env_lower_scope() {

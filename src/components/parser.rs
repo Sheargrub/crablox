@@ -14,8 +14,6 @@ use lox_statement::Statement;
 use lox_expression::Expression;
 use lox_node::*;
 
-static SEMICOLON_ERR_STR: &str = "Expected ';' at end of statement.";
-
 pub struct LoxParser {
     tokens: Vec<Token>,
     error_strings: Vec<String>,
@@ -72,9 +70,18 @@ impl LoxParser {
 
             while !self.is_at_end() && self.peek().unwrap().data != TokenData::EndOfFile {
                 let r = self.statement();
-                match r {
-                    Ok(st) => self.output.push(st),
-                    Err(()) => self.valid = false,
+                if let Ok(st) = r {
+                    self.output.push(st);
+
+                    let sc = self.consume(TokenData::Semicolon);
+                    if sc == None {
+                        self.add_error("Expected ';' at end of statement.");
+                        self.valid = false;
+                    }
+                }
+                else {
+                    self.valid = false;
+                    self.synchronize();
                 }
             }
         }
@@ -103,12 +110,10 @@ impl LoxParser {
 
         if let TokenData::Identifier(id) = next.data {
             let mut expr = Expression::boxed_nil();
-            if !self.is_at_end() && self.peek().unwrap().data == TokenData::Equal {
-                self.advance().expect("is_at_end() check should guarantee advance()");
+            if !self.is_at_end() && self.consume(TokenData::Equal).is_some() {
                 expr = self.expression()?;
             }
             let d = Statement::Decl(id, expr);
-            self.consume(TokenData::Semicolon, SEMICOLON_ERR_STR)?;
             Ok(d)
         }
         
@@ -124,11 +129,11 @@ impl LoxParser {
             match t.data {
                 TokenData::Print => {
                     self.advance().expect("If-let condition should guarantee advance()");
-                    let e = self.handle_statement_unary()?;
+                    let e = self.expression()?;
                     Ok(Statement::Print(e))
                 }
                 _ => { // Expression statement
-                    let e = self.handle_statement_unary()?;
+                    let e = self.expression()?;
                     Ok(Statement::Expr(e))
                 },
             }
@@ -138,15 +143,22 @@ impl LoxParser {
         }
     }
 
-    fn handle_statement_unary(&mut self) -> Result<Box<Expression>, ()> {
-        let e = self.expression()?;
-        self.consume(TokenData::Semicolon, SEMICOLON_ERR_STR)?;
-        Ok(e)
-    }
-
     fn expression(&mut self) -> Result<Box<Expression>, ()> {
         let t = self.advance()?;
-        Ok(self.equality(t)?)
+        Ok(self.assignment(t)?)
+    }
+
+    fn assignment(&mut self, t: Token) -> Result<Box<Expression>, ()> {
+        if let TokenData::Identifier(ref id) = t.data {
+            if self.consume(TokenData::Equal).is_some() {
+                Ok(Expression::boxed_assignment(id, self.expression()?))
+            } else {
+                self.equality(t)
+            }
+        }
+        else {
+            self.equality(t)
+        }
     }
 
     fn equality(&mut self, t: Token) -> Result<Box<Expression>, ()> {
@@ -371,6 +383,19 @@ impl LoxParser {
         else { None }
     }
 
+    // Will consume the next token iff it is of the same type as error_str.
+    fn consume(&mut self, token_type: TokenData) -> Option<Token> {
+        use std::mem::discriminant;
+        let next = self.peek();
+
+        if let Some(t) = next {
+            if discriminant(&token_type) == discriminant(&t.data) {
+                return Some(self.advance().expect("if-let condition should guarantee advance()"));
+            }
+        }
+        None
+    }
+
     // Will trigger error detection at end of file.
     fn advance(&mut self) -> Result<Token, ()> {
         if !self.is_at_end() {
@@ -381,18 +406,6 @@ impl LoxParser {
         }
         else { 
             self.add_error("Ran out of tokens unexpectedly. (This likely indicates a scanner bug.)");
-            Err(())
-        }
-    }
-
-    // Will trigger error detection at end of file or mismatched data type.
-    fn consume(&mut self, token_type: TokenData, error_str: &str) -> Result<Token, ()> {
-        use std::mem::discriminant;
-        let next = self.advance()?;
-        if discriminant(&token_type) == discriminant(&next.data) {
-            Ok(next)
-        } else {
-            self.add_error(error_str);
             Err(())
         }
     }
@@ -446,8 +459,24 @@ mod tests {
             panic!("Error while parsing statement: {:?}", parser.error_strings);
         }
     }
+
+    fn test_program_generic(test_str: &str, expected: Vec<Statement>) {
+        let mut parser = LoxParser::new();
+        parser.load_string(test_str).expect("Error while scanning input string");
+        let output = parser.parse();
+
+        if let Ok(result) = output {
+            assert_eq!(
+                expected,
+                result,
+                "Expected to recieve left side; recieved right."
+            );
+        } else {
+            panic!("Error while parsing statement: {:?}", parser.error_strings);
+        }
+    }
     
-    mod primary_expressions {
+    mod atomic_expressions {
         use super::*;
         
         #[test]
@@ -677,18 +706,39 @@ mod tests {
         }
     }
 
-    mod statements {
+    mod assignment {
         use super::*;
 
         #[test]
-        #[should_panic]
-        fn test_statement_expects_semicolon() {
-            let test_str = "0.0";
+        fn test_statement_assignment() {
+            let test_str = "i = 0;";
             let expected = Statement::Expr(
-                Expression::boxed_number(0.0),
+                Expression::boxed_assignment(
+                    "i",
+                    Expression::boxed_number(0.0),
+                )
             );
             test_statement_generic(test_str, expected);
         }
+
+        #[test]
+        fn test_statement_assignment_nested() {
+            let test_str = "i = j = 1;";
+            let expected = Statement::Expr(
+                Expression::boxed_assignment(
+                    "i",
+                    Expression::boxed_assignment(
+                        "j",
+                        Expression::boxed_number(1.0),
+                    )
+                )
+            );
+            test_statement_generic(test_str, expected);
+        }
+    }
+
+    mod statements {
+        use super::*;
 
         #[test]
         fn test_statement_expression() {
@@ -728,49 +778,137 @@ mod tests {
             test_statement_generic(test_str, expected);
         }
 
+        mod decl {
+            use super::*;
+
+            #[test]
+            fn test_statement_decl() {
+                let test_str = "var i = 0;";
+                let expected = Statement::Decl(
+                    String::from("i"),
+                    Expression::boxed_number(0.0),
+                );
+                test_statement_generic(test_str, expected);
+            }
+
+            #[test]
+            #[should_panic]
+            fn test_statement_decl_expects_equals() {
+                let test_str = "var i 0;";
+                let expected = Statement::Decl(
+                    String::from("i"),
+                    Expression::boxed_number(0.0),
+                );
+                test_statement_generic(test_str, expected);
+            }
+
+            #[test]
+            #[should_panic]
+            fn test_statement_decl_rejects_statement() {
+                let test_str = "var i = print 0;";
+                let expected = Statement::Decl(
+                    String::from("i"),
+                    Expression::boxed_number(0.0),
+                );
+                test_statement_generic(test_str, expected);
+            }
+        }
+
+    }
+
+    mod programs {
+        use super::*;
+
         #[test]
-        fn test_statement_decl() {
-            let test_str = "var i = 0;";
-            let expected = Statement::Decl(
-                String::from("i"),
-                Expression::boxed_number(0.0),
+        fn test_program_hello_world() {
+            let test_program = concat!(
+                "var my_var = \"Hello, world!\";",
+                "print my_var;",
             );
-            test_statement_generic(test_str, expected);
+
+            let expected = vec![
+                Statement::Decl(
+                    String::from("my_var"),
+                    Expression::boxed_string("Hello, world!"),
+                ),
+                Statement::Print(
+                    Expression::boxed_identifier("my_var"),
+                ),
+            ];
+            test_program_generic(test_program, expected);
         }
 
         #[test]
-        #[should_panic]
-        fn test_statement_decl_expects_equals() {
-            let test_str = "var i 0;";
-            let expected = Statement::Decl(
-                String::from("i"),
-                Expression::boxed_number(0.0),
+        fn test_program_assignments() {
+            let test_program = concat!(
+                "var i;",
+                "var j = 2;",
+                "var k = 3 + 4;",
+                "i = 3;",
+                "j = 3 - 1;",
+                "k = j + k + 3;",
+                "i = j = k;",
             );
-            test_statement_generic(test_str, expected);
+            
+            let expected = vec![
+                Statement::Decl(
+                    String::from("i"),
+                    Expression::boxed_nil(),
+                ),
+                Statement::Decl(
+                    String::from("j"),
+                    Expression::boxed_number(2.0),
+                ),
+                Statement::Decl(
+                    String::from("k"),
+                    Expression::boxed_binary(
+                        Expression::boxed_number(3.0),
+                        BinaryOp::Add,
+                        Expression::boxed_number(4.0),
+                    )
+                ),
+                Statement::Expr(
+                    Expression::boxed_assignment(
+                        "i",
+                        Expression::boxed_number(3.0),
+                    )
+                ),
+                Statement::Expr(
+                    Expression::boxed_assignment(
+                        "j",
+                        Expression::boxed_binary(
+                            Expression::boxed_number(3.0),
+                            BinaryOp::Subtract,
+                            Expression::boxed_number(1.0),
+                        )
+                    )
+                ),
+                Statement::Expr(
+                    Expression::boxed_assignment(
+                        "k",
+                        Expression::boxed_binary(
+                            Expression::boxed_binary(
+                                Expression::boxed_identifier("j"),
+                                BinaryOp::Add,
+                                Expression::boxed_identifier("k"),
+                            ),
+                            BinaryOp::Add,
+                            Expression::boxed_number(3.0),
+                        )
+                    )
+                ),
+                Statement::Expr(
+                    Expression::boxed_assignment(
+                        "i",
+                        Expression::boxed_assignment(
+                            "j",
+                            Expression::boxed_identifier("k"),
+                        )
+                    )
+                ),
+            ];
+            test_program_generic(test_program, expected);
         }
-
-        #[test]
-        #[should_panic]
-        fn test_statement_decl_expects_semicolon() {
-            let test_str = "var i = 0";
-            let expected = Statement::Decl(
-                String::from("i"),
-                Expression::boxed_number(0.0),
-            );
-            test_statement_generic(test_str, expected);
-        }
-
-        #[test]
-        #[should_panic]
-        fn test_statement_decl_rejects_statement() {
-            let test_str = "var i = print 0;";
-            let expected = Statement::Decl(
-                String::from("i"),
-                Expression::boxed_number(0.0),
-            );
-            test_statement_generic(test_str, expected);
-        }
-
     }
 
 }

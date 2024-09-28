@@ -44,17 +44,21 @@ impl LoxInterpreter {
         }
     }
 
-    pub fn evaluate_expr(&self, e: Expression) -> Result<Literal, String> {
+    pub fn evaluate_expr(&mut self, e: Expression) -> Result<Literal, String> {
         match e {
             LExp(l) => Ok(l),
             UExp(u) => self.evaluate_expr_unary(u),
             BExp(b) => self.evaluate_expr_binary(b),
-            Grouping(boxed_exp) => self.evaluate_expr(*boxed_exp),
             Identifier(id) => Ok(self.env.get(&id)?),
+            Grouping(boxed_exp) => self.evaluate_expr(*boxed_exp),
+            Assignment(id, boxed_exp) => {
+                let lit = self.evaluate_expr(*boxed_exp)?;
+                Ok(self.env.assign(&id, lit)?)
+            }
         }
     }
 
-    fn evaluate_expr_unary(&self, u: Unary) -> Result<Literal, String> {
+    fn evaluate_expr_unary(&mut self, u: Unary) -> Result<Literal, String> {
         match u {
             Unary::Negative(expr) => {
                 match *expr {
@@ -75,7 +79,7 @@ impl LoxInterpreter {
         }
     }
 
-    fn evaluate_expr_binary(&self, b: Binary) -> Result<Literal, String> {
+    fn evaluate_expr_binary(&mut self, b: Binary) -> Result<Literal, String> {
         use node::BinaryOp::*;
         
         let left = self.evaluate_expr(*b.left)?;
@@ -139,7 +143,7 @@ mod tests {
 
     fn test_expression_generic(s: &str, expected: Literal) {
         let expr = string_to_expr(s);
-        let intp = LoxInterpreter::new();
+        let mut intp = LoxInterpreter::new();
         let result = intp.evaluate_expr(expr).expect("Evaluation error");
         assert_eq!(expected, result, "Expected to recieve left side; recieved right.");
     }
@@ -269,10 +273,10 @@ mod tests {
         #[test]
         fn test_variable_declaration() {
             let mut intp = LoxInterpreter::new();
-            let program = string_to_program("\
-var i;
-var j = 2;");
-            println!("{:?}", program);
+            let program = string_to_program(concat!(
+                "var i;",
+                "var j = 2;",
+            ));
             intp.interpret(program).expect("Error while interpreting program");
 
             let expected = Nil;
@@ -281,21 +285,47 @@ var j = 2;");
 
             let expected = Number(2.0);
             let result = intp.env.get("j").expect("Failed to retrieve an initialized variable");
-            assert_eq!(expected, result, "Uninitialized variable should equal 2; instead recieved {}", result);
+            assert_eq!(expected, result, "Variable should equal 2; instead recieved {}", result);
         }
 
         #[test]
         fn test_variable_redeclaration() {
             let mut intp = LoxInterpreter::new();
-            let program = string_to_program("\
-var i = 1;
-var i = i + 1;");
-            println!("{:?}", program);
+            let program = string_to_program(concat!(
+                "var i = 1;",
+                "var i = i + 1;",
+            ));
             intp.interpret(program).expect("Error while interpreting program");
 
             let expected = Number(2.0);
             let result = intp.env.get("i").expect("Failed to retrieve an initialized variable");
-            assert_eq!(expected, result, "Uninitialized variable should equal 2; instead recieved {}", result);
+            assert_eq!(expected, result, "Variable should equal 2; instead recieved {}", result);
+        }
+
+        #[test]
+        fn test_variable_assignment() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "var i = 0;",
+                "var j;",
+                "var k;",
+                "i = i + 1;",
+                "k = j = 1 + i;",
+                "k = k + 1;",
+            ));
+            intp.interpret(program).expect("Error while interpreting program");
+            
+            let expected = Number(1.0);
+            let result = intp.env.get("i").expect("Failed to retrieve an initialized variable");
+            assert_eq!(expected, result, "Variable should equal 1; instead recieved {}", result);
+
+            let expected = Number(2.0);
+            let result = intp.env.get("j").expect("Failed to retrieve an initialized variable");
+            assert_eq!(expected, result, "Variable should equal 2; instead recieved {}", result);
+
+            let expected = Number(3.0);
+            let result = intp.env.get("k").expect("Failed to retrieve an initialized variable");
+            assert_eq!(expected, result, "Variable should equal 3; instead recieved {}", result);
         }
 
     }
