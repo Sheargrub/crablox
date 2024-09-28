@@ -7,12 +7,12 @@ use node::*;
 use node::Literal::*;
 use lox::environment::*;
 
-pub struct LoxInterpreter<'a> {
-    env: LoxEnvironment<'a>,
+pub struct LoxInterpreter {
+    env: LoxEnvironment,
 }
 
-impl<'a> LoxInterpreter<'a> {
-    pub fn new() -> LoxInterpreter<'a> {
+impl LoxInterpreter {
+    pub fn new() -> LoxInterpreter {
         LoxInterpreter{ env: LoxEnvironment::new() }
     }
 
