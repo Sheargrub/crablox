@@ -1,9 +1,11 @@
 pub mod program;
 mod components{
-    pub mod instructions;
     pub mod parser;
     pub mod interpreter;
-    pub mod error;
+    pub mod instructions;
+
+    mod error;
+    mod environment;
 }
 
 use crate::program::*;

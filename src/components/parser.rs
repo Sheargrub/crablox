@@ -14,7 +14,7 @@ use lox_statement::Statement;
 use lox_expression::Expression;
 use lox_node::*;
 
-static semicolon_errstr: &str = "Expected ';' at end of statement.";
+static SEMICOLON_ERR_STR: &str = "Expected ';' at end of statement.";
 
 pub struct LoxParser {
     tokens: Vec<Token>,
@@ -121,7 +121,7 @@ impl LoxParser {
             }
 
             let d = Statement::Decl(Identifier::new(&id), expr);
-            self.consume(TokenData::Semicolon, semicolon_errstr)?;
+            self.consume(TokenData::Semicolon, SEMICOLON_ERR_STR)?;
             Ok(d)
         }
         
@@ -133,7 +133,7 @@ impl LoxParser {
 
     fn handle_statement_unary(&mut self) -> Result<Box<Expression>, ()> {
         let e = self.expression()?;
-        self.consume(TokenData::Semicolon, semicolon_errstr)?;
+        self.consume(TokenData::Semicolon, SEMICOLON_ERR_STR)?;
         Ok(e)
     }
 

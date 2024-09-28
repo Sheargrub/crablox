@@ -5,14 +5,15 @@ use expression::Expression;
 use expression::Expression::*;
 use node::*;
 use node::Literal::*;
+use lox::environment::*;
 
-pub struct LoxInterpreter {
-
+pub struct LoxInterpreter<'a> {
+    env: LoxEnvironment<'a>,
 }
 
-impl LoxInterpreter {
-    pub fn new() -> LoxInterpreter {
-        LoxInterpreter{}
+impl<'a> LoxInterpreter<'a> {
+    pub fn new() -> LoxInterpreter<'a> {
+        LoxInterpreter{ env: LoxEnvironment::new() }
     }
 
     pub fn interpret(&self, program: Vec<Statement>) {
