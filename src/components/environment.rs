@@ -44,6 +44,8 @@ impl LoxEnvironment  {
     }
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -57,12 +59,7 @@ mod tests {
         assert_eq!(lit_in, lit_out, "Environment output a different value than was put in.");
     }
 
-    #[test]
-    #[should_panic]
-    fn test_env_bad_access() {
-        let env = LoxEnvironment::new();
-        env.get("fakeVar").expect("Attempted read from undeclared variable");
-    }
+    
 
     #[test]
     fn test_env_lower_scope() {
@@ -71,6 +68,18 @@ mod tests {
         env.define("clicheVar", lit_in.clone());
 
         env.lower_scope();
+        let lit_out = env.get("clicheVar").expect("Read failed");
+        assert_eq!(lit_in, lit_out, "Environment output a different value than was put in.");
+    }
+
+    #[test]
+    fn test_env_var_shadowing() {
+        let mut env = LoxEnvironment::new();
+        env.define("clicheVar", Literal::StringData(String::from("This will get shadowed.")));
+
+        env.lower_scope();
+        let lit_in = Literal::StringData(String::from("Hello world!"));
+        env.define("clicheVar", lit_in.clone());
         let lit_out = env.get("clicheVar").expect("Read failed");
         assert_eq!(lit_in, lit_out, "Environment output a different value than was put in.");
     }
@@ -85,5 +94,33 @@ mod tests {
         env.raise_scope().expect("Scope raise failed");
         let lit_out = env.get("clicheVar").expect("Read failed");
         assert_eq!(lit_in, lit_out, "Environment output a different value than was put in.");
+    }
+
+    #[test]
+    fn test_env_access_undeclared() {
+        let env = LoxEnvironment::new();
+        let err_out = env.get("fakeVar");
+        if let Err(e) = err_out {
+            assert!(e.contains("Undefined variable"));
+        } else {
+            panic!("Unexpectedly recieved valid output.");
+        }
+    }
+
+    #[test]
+    fn test_env_access_out_of_scope() {
+        let mut env = LoxEnvironment::new();
+        
+        env.lower_scope();
+        env.define("clicheVar", Literal::StringData(String::from("Hello world!")));
+
+        env.raise_scope().expect("Scope raise failed");
+        let err_out = env.get("clicheVar");
+        
+        if let Err(e) = err_out {
+            assert!(e.contains("Undefined variable"));
+        } else {
+            panic!("Unexpectedly recieved valid output.");
+        }
     }
 }
