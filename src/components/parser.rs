@@ -87,30 +87,18 @@ impl LoxParser {
     fn statement(&mut self) -> Result<Statement, ()> {
         let next = self.peek();
         if let Some(t) = next {
-            match t.data {
-                TokenData::Var => {
-                    self.advance().expect("If-let condition should guarantee advance()");
-                    self.statement_decl()
-                }
-
-                TokenData::Print => {
-                    self.advance().expect("If-let condition should guarantee advance()");
-                    let e = self.handle_statement_unary()?;
-                    Ok(Statement::Print(e))
-                }
-    
-                _ => { // Expression statement
-                    let e = self.handle_statement_unary()?;
-                    Ok(Statement::Expr(e))
-                },
+            if let TokenData::Var = t.data {
+                self.advance().expect("If-let condition should guarantee advance()");
+                self.stmt_decl()
             }
+            else { self.stmt_nestable() }
         } else {
             self.add_error("Attempted to read a statement while no tokens were present.");
             Err(())
         }
     }
 
-    fn statement_decl(&mut self) -> Result<Statement, ()> {
+    fn stmt_decl(&mut self) -> Result<Statement, ()> {
         let next = self.advance()?;
 
         if let TokenData::Identifier(id) = next.data {
@@ -126,6 +114,26 @@ impl LoxParser {
         
         else {
             self.add_error("Expected variable name after 'var'.");
+            Err(())
+        }
+    }
+
+    fn stmt_nestable(&mut self) -> Result<Statement, ()> {
+        let next = self.peek();
+        if let Some(t) = next {
+            match t.data {
+                TokenData::Print => {
+                    self.advance().expect("If-let condition should guarantee advance()");
+                    let e = self.handle_statement_unary()?;
+                    Ok(Statement::Print(e))
+                }
+                _ => { // Expression statement
+                    let e = self.handle_statement_unary()?;
+                    Ok(Statement::Expr(e))
+                },
+            }
+        } else {
+            self.add_error("Attempted to read a statement while no tokens were present.");
             Err(())
         }
     }
@@ -673,6 +681,16 @@ mod tests {
         use super::*;
 
         #[test]
+        #[should_panic]
+        fn test_statement_expects_semicolon() {
+            let test_str = "0.0";
+            let expected = Statement::Expr(
+                Expression::boxed_number(0.0),
+            );
+            test_statement_generic(test_str, expected);
+        }
+
+        #[test]
         fn test_statement_expression() {
             let test_str = "3 + -4 * -5 - 6;";
             let expected = Statement::Expr(Expression::boxed_binary(
@@ -722,7 +740,7 @@ mod tests {
 
         #[test]
         #[should_panic]
-        fn test_statement_bad_decl() {
+        fn test_statement_decl_expects_equals() {
             let test_str = "var i 0;";
             let expected = Statement::Decl(
                 String::from("i"),
@@ -733,9 +751,10 @@ mod tests {
 
         #[test]
         #[should_panic]
-        fn test_statement_no_semicolon() {
-            let test_str = "0.0";
-            let expected = Statement::Expr(
+        fn test_statement_decl_expects_semicolon() {
+            let test_str = "var i = 0";
+            let expected = Statement::Decl(
+                String::from("i"),
                 Expression::boxed_number(0.0),
             );
             test_statement_generic(test_str, expected);
@@ -743,14 +762,15 @@ mod tests {
 
         #[test]
         #[should_panic]
-        fn test_statement_no_semicolon_decl() {
-            let test_str = "var = i 0";
+        fn test_statement_decl_rejects_statement() {
+            let test_str = "var i = print 0;";
             let expected = Statement::Decl(
                 String::from("i"),
                 Expression::boxed_number(0.0),
             );
             test_statement_generic(test_str, expected);
         }
+
     }
 
 }

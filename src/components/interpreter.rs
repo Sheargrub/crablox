@@ -18,13 +18,13 @@ impl LoxInterpreter {
 
     pub fn interpret(&mut self, program: Vec<Statement>) -> Result<(), String> {
         for s in program {
-            let result = self.evaluate_decl(s);
+            let result = self.evaluate_stmt(s);
             if let Err(e) = result { return Err(e); }
         }
         Ok(())
     }
 
-    pub fn evaluate_decl(&mut self, s: Statement) -> Result<(), String> {
+    pub fn evaluate_stmt(&mut self, s: Statement) -> Result<(), String> {
         use Statement::*;
         match s {
             Decl(id, expr) => {
@@ -32,13 +32,6 @@ impl LoxInterpreter {
                 self.env.define(&id, data);
                 Ok(())
             },
-            _ => self.evaluate_stmt(s)
-        }
-    }
-
-    pub fn evaluate_stmt(&self, s: Statement) -> Result<(), String> {
-        use Statement::*;
-        match s {
             Print(e) => {
                 // TODO: I'd like to get a proper std_out working
                 println!("{}", self.evaluate_expr(*e)?);
@@ -48,9 +41,6 @@ impl LoxInterpreter {
                 self.evaluate_expr(*e)?;
                 Ok(())
             },
-            Decl(_, _) => {
-                Err(String::from("Cannot use a declaration within another statement."))
-            }
         }
     }
 
