@@ -119,8 +119,7 @@ impl LoxParser {
                 self.advance().expect("is_at_end() check should guarantee advance()");
                 expr = self.expression()?;
             }
-
-            let d = Statement::Decl(Identifier::new(&id), expr);
+            let d = Statement::Decl(id, expr);
             self.consume(TokenData::Semicolon, SEMICOLON_ERR_STR)?;
             Ok(d)
         }
@@ -299,6 +298,7 @@ impl LoxParser {
 
     fn primary(&mut self, t: Token) -> Result<Box<Expression>, ()> {
         match t.data {
+            TokenData::Identifier(id) => Ok(Expression::boxed_identifier(&id)),
             TokenData::Number(n) => Ok(Expression::boxed_number(n)),
             TokenData::StringData(s) => Ok(Expression::boxed_string(&s)),
             TokenData::True => Ok(Expression::boxed_bool(true)),
@@ -446,6 +446,13 @@ mod tests {
         fn test_expression_primary() {
             let test_str = "\"Hello world!\"";
             let expected = Expression::boxed_string("Hello world!");
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_identifier() {
+            let test_str = "my_var";
+            let expected = Expression::boxed_identifier("my_var");
             test_expression_generic(test_str, expected);
         }
     }
@@ -707,7 +714,7 @@ mod tests {
         fn test_statement_decl() {
             let test_str = "var i = 0;";
             let expected = Statement::Decl(
-                Identifier::new("i"),
+                String::from("i"),
                 Expression::boxed_number(0.0),
             );
             test_statement_generic(test_str, expected);
@@ -718,7 +725,7 @@ mod tests {
         fn test_statement_bad_decl() {
             let test_str = "var i 0;";
             let expected = Statement::Decl(
-                Identifier::new("i"),
+                String::from("i"),
                 Expression::boxed_number(0.0),
             );
             test_statement_generic(test_str, expected);
@@ -739,7 +746,7 @@ mod tests {
         fn test_statement_no_semicolon_decl() {
             let test_str = "var = i 0";
             let expected = Statement::Decl(
-                Identifier::new("i"),
+                String::from("i"),
                 Expression::boxed_number(0.0),
             );
             test_statement_generic(test_str, expected);

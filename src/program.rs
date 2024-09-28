@@ -21,6 +21,6 @@ impl LoxProgram {
         let program = parser.parse().expect("Unhandled");
 
         let mut interpreter = LoxInterpreter::new();
-        interpreter.interpret(program);
+        interpreter.interpret(program).expect("TODO");
     }
 }

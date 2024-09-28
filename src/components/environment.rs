@@ -20,14 +20,12 @@ impl LoxEnvironment  {
 
     pub fn get(&self, name: &str) -> Result<Literal, String> {
         let iter = self.nodes.iter().rev();
-        let mut result: Result<Literal, String> = Err(format!("Undefined variable {}.", name));
         for node in iter {
             if let Some(lit) = node.get(name) {
-                result = Ok(lit.clone());
-                break;
+                return Ok(lit.clone());
             }
         }
-        result
+        Err(format!("Undefined variable {}.", name))
     }
 
     pub fn lower_scope(&mut self){
@@ -119,6 +117,21 @@ mod tests {
         
         if let Err(e) = err_out {
             assert!(e.contains("Undefined variable"));
+        } else {
+            panic!("Unexpectedly recieved valid output.");
+        }
+    }
+
+    #[test]
+    fn test_env_raise_past_global() {
+        let mut env = LoxEnvironment::new();
+        
+        env.lower_scope();
+        env.raise_scope().expect("Valid scope raise failed");
+        let err_out = env.raise_scope();
+        
+        if let Err(e) = err_out {
+            assert!(e.contains("raise past global"));
         } else {
             panic!("Unexpectedly recieved valid output.");
         }

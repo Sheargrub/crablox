@@ -16,21 +16,20 @@ impl LoxInterpreter {
         LoxInterpreter{ env: LoxEnvironment::new() }
     }
 
-    pub fn interpret(&self, program: Vec<Statement>) {
+    pub fn interpret(&mut self, program: Vec<Statement>) -> Result<(), String> {
         for s in program {
-            let result = self.evaluate_stmt(s);
-            if let Err(e) = result {
-                println!("{}", e);
-                break;
-            }
+            let result = self.evaluate_decl(s);
+            if let Err(e) = result { return Err(e); }
         }
+        Ok(())
     }
 
-    pub fn evaluate_decl(&self, s: Statement) -> Result<(), String> {
+    pub fn evaluate_decl(&mut self, s: Statement) -> Result<(), String> {
         use Statement::*;
         match s {
-            Decl(_, _) => {
-                // TODO
+            Decl(id, expr) => {
+                let data = self.evaluate_expr(*expr)?;
+                self.env.define(&id, data);
                 Ok(())
             },
             _ => self.evaluate_stmt(s)
@@ -61,6 +60,7 @@ impl LoxInterpreter {
             UExp(u) => self.evaluate_expr_unary(u),
             BExp(b) => self.evaluate_expr_binary(b),
             Grouping(boxed_exp) => self.evaluate_expr(*boxed_exp),
+            Identifier(id) => Ok(self.env.get(&id)?),
         }
     }
 
@@ -135,15 +135,16 @@ fn get_number(l: Literal) -> Result<f64, String> {
 mod tests {
     use super::*;
 
-    fn string_to_expr(s: &str) -> Expression {
+    fn string_to_program(s: &str) -> Vec<Statement> {
         let mut parser = lox::parser::LoxParser::new();
         parser.load_string(s).expect("Error while scanning input string.");
-        let statements = parser.parse().expect("Error while parsing expression.");
-        if let Statement::Expr(e) = statements[0].clone() { // TODO: refactor to remove clone call
-            *e
-        } else {
-            panic!("Attempted to convert a non-statement to an expression.");
-        }
+        parser.parse().expect("Error while parsing expression.")
+    }
+
+    fn string_to_expr(s: &str) -> Expression {
+        let statements = string_to_program(s);
+        if let Statement::Expr(e) = statements[0].clone() { *e }
+        else { panic!("Attempted to convert a non-statement to an expression."); }
     }
 
     fn test_expression_generic(s: &str, expected: Literal) {
@@ -271,4 +272,42 @@ mod tests {
             test_expression_generic(test_str, Number(11.0));
         }
     }
+
+    mod variables_and_declarations {
+        use super::*;
+
+        #[test]
+        fn test_variable_declaration() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program("\
+var i;
+var j = 2;");
+            println!("{:?}", program);
+            intp.interpret(program).expect("Error while interpreting program");
+
+            let expected = Nil;
+            let result = intp.env.get("i").expect("Failed to retrieve an uninitialized variable");
+            assert_eq!(expected, result, "Uninitialized variable should be Nil; instead recieved {}", result);
+
+            let expected = Number(2.0);
+            let result = intp.env.get("j").expect("Failed to retrieve an initialized variable");
+            assert_eq!(expected, result, "Uninitialized variable should equal 2; instead recieved {}", result);
+        }
+
+        #[test]
+        fn test_variable_redeclaration() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program("\
+var i = 1;
+var i = i + 1;");
+            println!("{:?}", program);
+            intp.interpret(program).expect("Error while interpreting program");
+
+            let expected = Number(2.0);
+            let result = intp.env.get("i").expect("Failed to retrieve an initialized variable");
+            assert_eq!(expected, result, "Uninitialized variable should equal 2; instead recieved {}", result);
+        }
+
+    }
+
 }
