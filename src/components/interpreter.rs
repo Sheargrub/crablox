@@ -68,7 +68,7 @@ impl LoxInterpreter {
             LitExp(lit) => Ok(lit),
             Unary(op, e) => self.evaluate_expr_unary(op, e),
             Binary{left, op, right} => self.evaluate_expr_binary(left, op, right),
-            Logical{left, op, right} => todo!(),
+            Logical{left, op, right} => self.evaluate_expr_logical(left, op, right),
             Identifier(id) => Ok(self.env.get(&id)?),
             Grouping(boxed_exp) => self.evaluate_expr(*boxed_exp),
             Assignment(id, boxed_exp) => {
@@ -115,6 +115,24 @@ impl LoxInterpreter {
 
             Equal => Ok(Boolean(left == right)),
             NotEqual => Ok(Boolean(left != right)),
+        }
+    }
+
+    fn evaluate_expr_logical(&mut self, left: Box<Expression>, op: node::LogicOp, right: Box<Expression>) -> Result<Literal, String> {
+        use node::LogicOp::*;
+        
+        let left_lit = self.evaluate_expr(*left)?;
+        let left_truthful = is_truthful(left_lit.clone()); // TODO: clone operation here is needlessly costly
+
+        match op {
+            And => {
+                if left_truthful { Ok(self.evaluate_expr(*right)?) }
+                else { Ok(left_lit) }
+            }
+            Or => {
+                if !left_truthful { Ok(self.evaluate_expr(*right)?) }
+                else { Ok(left_lit) }
+            }
         }
     }
 }
@@ -251,6 +269,30 @@ mod tests {
         #[test]
         fn test_expression_not_equal() {
             test_expression_generic("4.1 != 5;", Boolean(true));
+        }
+    }
+
+    mod logical_expressions {
+        use super::*;
+
+        #[test]
+        fn test_expression_and() {
+            let test_str = "3.0 and 0.0;";
+            let expected = Number(0.0);
+            test_expression_generic(test_str, expected);
+            let test_str = "nil and 0.0;";
+            let expected = Nil;
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_or() {
+            let test_str = "3.0 or 0.0;";
+            let expected = Number(3.0);
+            test_expression_generic(test_str, expected);
+            let test_str = "nil or 0.0;";
+            let expected = Number(0.0);
+            test_expression_generic(test_str, expected);
         }
     }
 
@@ -395,6 +437,33 @@ mod tests {
             let expected = concat!(
                 "Math is working\n",
                 "333",
+            );
+
+            assert_eq!(expected, output, "Expected left output; recieved right");
+        }
+
+        #[test]
+        fn test_logical_short_circuiting() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "var i; var j; var k;\n",
+                "(i = 1) or (j = 2);\n",
+                "print i; print j;\n",
+                "j or (k = 2);\n",
+                "print k;\n",
+                "j and (j = 3);\n",
+                "print j;\n",
+                "i and (j = 4);\n",
+                "print j;\n",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = concat!(
+                "1\n",
+                "Nil\n",
+                "2\n",
+                "Nil\n",
+                "4",
             );
 
             assert_eq!(expected, output, "Expected left output; recieved right");
