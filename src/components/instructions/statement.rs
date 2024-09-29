@@ -9,4 +9,5 @@ pub enum Statement {
     Expr(Box<Expression>),
     Print(Box<Expression>),
     Block(Vec<Box<Statement>>),
+    If(Box<Expression>, Box<Statement>, Option<Box<Statement>>),
 }

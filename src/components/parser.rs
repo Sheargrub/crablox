@@ -132,6 +132,26 @@ impl LoxParser {
                     self.pass_semicolon();
                     Ok(e)
                 }
+                TokenData::If => {
+                    self.advance().expect("If-let condition should guarantee advance()");
+                    if !self.consume(TokenData::LeftParen).is_some() {
+                        self.add_error("Expected '(' after if statement.");
+                        return Err(());
+                    };
+                    let condition = self.expression()?;
+                    if !self.consume(TokenData::RightParen).is_some() {
+                        self.add_error("Expected ')' after if condition.");
+                        return Err(());
+                    };
+                    let then_branch = Box::new(self.stmt_nestable()?);
+
+                    if self.consume(TokenData::Else).is_some() {
+                        let else_branch = Some(Box::new(self.stmt_nestable()?));
+                        Ok(Statement::If(condition, then_branch, else_branch))
+                    } else {
+                        Ok(Statement::If(condition, then_branch, None))
+                    }
+                }
                 _ => { // Expression statement
                     let e = Statement::Expr(self.expression()?);
                     self.pass_semicolon();
@@ -502,17 +522,25 @@ mod tests {
     
     mod atomic_expressions {
         use super::*;
+
+        #[test]
+        fn test_expression_identifier() {
+            let test_str = "my_var";
+            let expected = Expression::boxed_identifier("my_var");
+            test_expression_generic(test_str, expected);
+        }
         
         #[test]
-        fn test_expression_primary() {
+        fn test_expression_string() {
             let test_str = "\"Hello world!\"";
             let expected = Expression::boxed_string("Hello world!");
             test_expression_generic(test_str, expected);
         }
 
         #[test]
-        fn test_expression_identifier() {
-            let test_str = "my_var";
+        #[should_panic]
+        fn test_expression_unterminated_string() {
+            let test_str = "\"Hello world!";
             let expected = Expression::boxed_identifier("my_var");
             test_expression_generic(test_str, expected);
         }
@@ -845,7 +873,7 @@ mod tests {
 
         #[test]
         fn test_program_hello_world() {
-            let test_program = concat!(
+            let source = concat!(
                 "var my_var = \"Hello, world!\";\n",
                 "print my_var;\n",
             );
@@ -858,12 +886,12 @@ mod tests {
                     Expression::boxed_identifier("my_var"),
                 ),
             ];
-            test_program_generic(test_program, expected);
+            test_program_generic(source, expected);
         }
 
         #[test]
         fn test_program_assignments() {
-            let test_program = concat!(
+            let source = concat!(
                 "var i;\n",
                 "var j = 2;\n",
                 "var k = 3 + 4;\n",
@@ -929,12 +957,12 @@ mod tests {
                     )
                 ),
             ];
-            test_program_generic(test_program, expected);
+            test_program_generic(source, expected);
         }
 
         #[test]
         fn test_program_blocks() {
-            let test_program = concat!(
+            let source = concat!(
                 "{}\n",
                 "var global = 23;\n",
                 "{\n",
@@ -960,7 +988,55 @@ mod tests {
                     ])),
                 ]),
             ];
-            test_program_generic(test_program, expected);
+            test_program_generic(source, expected);
+        }
+
+        #[test]
+        fn test_program_if_else() {
+            let source = concat!(
+                "if (2 <= 3) print \"Math is working\";\n",
+                "var three = 3;\n",
+                "if (three == 3) {\n",
+                "   print 333;\n",
+                "} else {\n",
+                "   print 4444;\n",
+                "}",
+            );
+            let expected = vec![
+                Statement::If(
+                    Expression::boxed_binary(
+                        Expression::boxed_number(2.0),
+                        BinaryOp::LessEqual,
+                        Expression::boxed_number(3.0),
+                    ),
+                    Box::new(Statement::Print(
+                        Expression::boxed_string("Math is working"),
+                    )),
+                    None,
+                ),
+                Statement::Decl(
+                    String::from("three"),
+                    Expression::boxed_number(3.0),
+                ),
+                Statement::If(
+                    Expression::boxed_binary(
+                        Expression::boxed_identifier("three"),
+                        BinaryOp::Equal,
+                        Expression::boxed_number(3.0),
+                    ),
+                    Box::new(Statement::Block(vec![
+                        Box::new(Statement::Print(
+                            Expression::boxed_number(333.0),
+                        )),
+                    ])),
+                    Some(Box::new(Statement::Block(vec![
+                        Box::new(Statement::Print(
+                            Expression::boxed_number(4444.0),
+                        )),
+                    ]))),
+                ),
+            ];
+            test_program_generic(source, expected);
         }
     }
 

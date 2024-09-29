@@ -16,14 +16,16 @@ impl LoxPrompt {
     }
 
     pub fn command(&mut self, input: &str) -> String {
-        self.parser.load_string(input).expect("Unhandled");
+        if let Err(v) = self.parser.load_string(input) {
+            return format!("Scanning error(s):\n{}", LoxPrompt::format_vec_output(v));
+        }
         let program = self.parser.parse();
         
         match program {
             Ok(p) => {
                 match self.interpreter.interpret(p) {
                     Ok(result) => result,
-                    Err(e) => e,
+                    Err(e) => format!("Runtime error: {}", e),
                 }
             },
             Err(v) => {

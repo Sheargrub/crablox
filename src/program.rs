@@ -15,30 +15,24 @@ impl LoxProgram {
     }
 
     pub fn run(&self) -> String {
-        let mut output = String::new();
-
         let mut parser = LoxParser::new();
-        parser.load_string(&self.instructions).expect("TODO: Unhandled failure when loading to parser");
+        if let Err(v) = parser.load_string(&self.instructions) {
+            return format!("Scanning error(s):\n{}", LoxProgram::format_vec_output(v));
+        }
         let program = parser.parse();
 
         match program {
             Ok(p) => {
                 let mut interpreter = LoxInterpreter::new();
                 match interpreter.interpret(p) {
-                    Ok(result) => output = result,
-                    Err(e) => {
-                        output.push_str("Runtime error:\n");
-                        output.push_str(&e);
-                    }
-                };
+                    Ok(result) => result,
+                    Err(e) => format!("Runtime error: {}", e),
+                }
             },
             Err(v) => {
-                output.push_str("Parsing error(s):\n");
-                output.push_str(&LoxProgram::format_vec_output(v));
+                format!("Parsing error(s):\n{}", LoxProgram::format_vec_output(v))
             },
         }
-
-        output
     }
 
     fn format_vec_output(v: Vec<String>) -> String {

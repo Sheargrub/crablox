@@ -51,6 +51,15 @@ impl LoxInterpreter {
                 self.evaluate_expr(*e)?;
                 Ok(())
             },
+            If(cond, then_branch, else_option) => {
+                if is_truthful(self.evaluate_expr(*cond)?) {
+                    self.evaluate_stmt(*then_branch)
+                } else if let Some(else_branch) = else_option {
+                    self.evaluate_stmt(*else_branch)
+                } else {
+                    Ok(())
+                }
+            },
         }
     }
 
@@ -342,38 +351,60 @@ mod tests {
         fn test_variable_scope() {
             let mut intp = LoxInterpreter::new();
             let program = string_to_program(concat!(
-                "var a = \"global a\";",
-                "var b = \"global b\";",
-                "var c = \"global c\";",
-                "{",
-                "  var a = \"outer a\";",
-                "  var b = \"outer b\";",
-                "  {",
-                "    var a = \"inner a\";",
-                "    print a;",
-                "    print b;",
-                "    print c;",
-                "  }",
-                "  print a;",
-                "  print b;",
-                "  print c;",
-                "}",
-                "print a;",
-                "print b;",
+                "var a = \"global a\";\n",
+                "var b = \"global b\";\n",
+                "var c = \"global c\";\n",
+                "{\n",
+                "  var a = \"outer a\";\n",
+                "  var b = \"outer b\";\n",
+                "  {\n",
+                "    var a = \"inner a\";\n",
+                "    print a;\n",
+                "    print b;\n",
+                "    print c;\n",
+                "  }\n",
+                "  print a;\n",
+                "  print b;\n",
+                "  print c;\n",
+                "}\n",
+                "print a;\n",
+                "print b;\n",
                 "print c;",
             ));
             let output = intp.interpret(program).expect("Error while interpreting program");
         
             let expected = concat!(
-                "inner a",
-                "outer b",
+                "inner a\n",
+                "outer b\n",
+                "global c\n",
+                "outer a\n",
+                "outer b\n",
+                "global c\n",
+                "global a\n",
+                "global b\n",
                 "global c",
-                "outer a",
-                "outer b",
-                "global c",
-                "global a",
-                "global b",
-                "global c",
+            );
+
+            assert_eq!(expected, output, "Expected left output; recieved right");
+        }
+
+        #[test]
+        fn test_if_else() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "if (2 <= 3) print \"Math is working\";\n",
+                "var three = 3;\n",
+                "if (three == 3) {\n",
+                "   print 333;\n",
+                "} else {\n",
+                "   print 4444;\n",
+                "}",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = concat!(
+                "Math is working\n",
+                "333",
             );
 
             assert_eq!(expected, output, "Expected left output; recieved right");
