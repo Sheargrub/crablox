@@ -1,5 +1,3 @@
-use crate::components as lox;
-use lox::instructions::expression::Expression;
 use core::fmt;
 
 #[derive(Debug)]
@@ -26,18 +24,10 @@ impl fmt::Display for Literal {
 #[derive(Debug)]
 #[derive(PartialEq)]
 #[derive(Clone)]
-pub enum Unary {
-    Negative(Box<Expression>),
-    Not(Box<Expression>),
-}
-
-#[derive(Debug)]
-#[derive(PartialEq)]
-#[derive(Clone)]
-pub struct Binary {
-    pub left: Box<Expression>,
-    pub operator: BinaryOp,
-    pub right: Box<Expression>,
+#[derive(Copy)]
+pub enum UnaryOp {
+    Negative,
+    Not,
 }
 
 #[derive(Debug)]
@@ -56,4 +46,13 @@ pub enum BinaryOp {
     Multiply,
     Divide,
     Modulo,
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Clone)]
+#[derive(Copy)]
+pub enum LogicOp {
+    And,
+    Or,
 }

@@ -65,9 +65,10 @@ impl LoxInterpreter {
 
     pub fn evaluate_expr(&mut self, e: Expression) -> Result<Literal, String> {
         match e {
-            LExp(l) => Ok(l),
-            UExp(u) => self.evaluate_expr_unary(u),
-            BExp(b) => self.evaluate_expr_binary(b),
+            LitExp(lit) => Ok(lit),
+            Unary(op, e) => self.evaluate_expr_unary(op, e),
+            Binary{left, op, right} => self.evaluate_expr_binary(left, op, right),
+            Logical{left, op, right} => todo!(),
             Identifier(id) => Ok(self.env.get(&id)?),
             Grouping(boxed_exp) => self.evaluate_expr(*boxed_exp),
             Assignment(id, boxed_exp) => {
@@ -77,34 +78,23 @@ impl LoxInterpreter {
         }
     }
 
-    fn evaluate_expr_unary(&mut self, u: Unary) -> Result<Literal, String> {
-        match u {
-            Unary::Negative(expr) => {
-                match *expr {
-                    LExp(l) => Ok(Number(-get_number(l)?)),
-                    other => {
-                        let inner = Expression::boxed_literal(self.evaluate_expr(other)?);
-                        self.evaluate_expr_unary(Unary::Negative(inner))
-                    },
-                }
-            },
-            Unary::Not(expr) => {
-                if let LExp(l) = *expr { Ok(Boolean(is_truthful(l))) }
-                else {
-                    let inner = Expression::boxed_literal(self.evaluate_expr(*expr)?);
-                    self.evaluate_expr_unary(Unary::Not(inner))
-                }
-            },
+    fn evaluate_expr_unary(&mut self, op: node::UnaryOp, e: Box<Expression>) -> Result<Literal, String> {
+        use node::UnaryOp::*;
+
+        let arg = self.evaluate_expr(*e)?;
+        match op {
+            Negative => Ok(Number(-get_number(arg)?)),
+            Not => Ok(Boolean(is_truthful(arg))),
         }
     }
 
-    fn evaluate_expr_binary(&mut self, b: Binary) -> Result<Literal, String> {
+    fn evaluate_expr_binary(&mut self, left: Box<Expression>, op: node::BinaryOp, right: Box<Expression>) -> Result<Literal, String> {
         use node::BinaryOp::*;
         
-        let left = self.evaluate_expr(*b.left)?;
-        let right = self.evaluate_expr(*b.right)?;
+        let left = self.evaluate_expr(*left)?;
+        let right = self.evaluate_expr(*right)?;
 
-        match b.operator {
+        match op {
             Add => {
                 let error_str = format!("Attempted to add mismatched operands {} and {}.", left, right);
                 match (left, right) {

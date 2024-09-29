@@ -189,12 +189,50 @@ impl LoxParser {
             if self.consume(TokenData::Equal).is_some() {
                 Ok(Expression::boxed_assignment(id, self.expression()?))
             } else {
-                self.equality(t)
+                self.logic_or(t)
             }
         }
         else {
-            self.equality(t)
+            self.logic_or(t)
         }
+    }
+
+    fn logic_or(&mut self, t: Token) -> Result<Box<Expression>, ()> {
+        let mut e = self.logic_and(t)?;
+        loop {
+            match self.peek() {
+                Some(Token { data: TokenData::Or, line: _ }) => {
+                    self.advance()?;
+                    let right = self.advance()?;
+                    e = Expression::boxed_logical(
+                        e,
+                        LogicOp::Or,
+                        self.logic_and(right)?,
+                    )
+                },
+                _ => break,
+            };
+        }
+        Ok(e)
+    }
+
+    fn logic_and(&mut self, t: Token) -> Result<Box<Expression>, ()> {
+        let mut e = self.equality(t)?;
+        loop {
+            match self.peek() {
+                Some(Token { data: TokenData::And, line: _ }) => {
+                    self.advance()?;
+                    let right = self.advance()?;
+                    e = Expression::boxed_logical(
+                        e,
+                        LogicOp::And,
+                        self.equality(right)?,
+                    )
+                },
+                _ => break,
+            };
+        }
+        Ok(e)
     }
 
     fn equality(&mut self, t: Token) -> Result<Box<Expression>, ()> {
@@ -341,12 +379,12 @@ impl LoxParser {
             TokenData::Bang => {
                 let arg = self.advance()?;
                 let u = self.unary(arg)?;
-                Ok(Expression::boxed_not(u))
+                Ok(Expression::boxed_unary(UnaryOp::Not, u))
             },
             TokenData::Minus => {
                 let arg = self.advance()?;
                 let u = self.unary(arg)?;
-                Ok(Expression::boxed_negative(u))
+                Ok(Expression::boxed_unary(UnaryOp::Negative, u))
             },
             _ => Ok(self.primary(t)?),
         }
@@ -552,14 +590,14 @@ mod tests {
         #[test]
         fn test_expression_unary_not() {
             let test_str = "!!false";
-            let expected = Expression::boxed_not(Expression::boxed_not(Expression::boxed_bool(false)));
+            let expected = Expression::boxed_unary(UnaryOp::Not, Expression::boxed_unary(UnaryOp::Not, Expression::boxed_bool(false)));
             test_expression_generic(test_str, expected);
         }
 
         #[test]
         fn test_expression_unary_negative() {
             let test_str = "-4.3";
-            let expected = Expression::boxed_negative(Expression::boxed_number(4.3));
+            let expected = Expression::boxed_unary(UnaryOp::Negative, Expression::boxed_number(4.3));
             test_expression_generic(test_str, expected);
         }
     }
@@ -700,9 +738,9 @@ mod tests {
                     Expression::boxed_number(3.0),
                     BinaryOp::Add,
                     Expression::boxed_binary(
-                        Expression::boxed_negative(Expression::boxed_number(4.0)),
+                        Expression::boxed_unary(UnaryOp::Negative, Expression::boxed_number(4.0)),
                         BinaryOp::Multiply,
-                        Expression::boxed_negative(Expression::boxed_number(5.0)),
+                        Expression::boxed_unary(UnaryOp::Negative, Expression::boxed_number(5.0)),
                     ),
                 ),
                 BinaryOp::Subtract,
@@ -745,11 +783,11 @@ mod tests {
                 Expression::boxed_grouping(Expression::boxed_binary(
                     Expression::boxed_number(3.0),
                     BinaryOp::Add,
-                    Expression::boxed_negative(Expression::boxed_number(4.0)),
+                    Expression::boxed_unary(UnaryOp::Negative, Expression::boxed_number(4.0)),
                 )),
                 BinaryOp::Multiply,
                 Expression::boxed_grouping(Expression::boxed_binary(
-                    Expression::boxed_negative(Expression::boxed_number(5.0)),
+                    Expression::boxed_unary(UnaryOp::Negative, Expression::boxed_number(5.0)),
                     BinaryOp::Subtract,
                     Expression::boxed_number(6.0),
                 )),
@@ -800,9 +838,9 @@ mod tests {
                     Expression::boxed_number(3.0),
                     BinaryOp::Add,
                     Expression::boxed_binary(
-                        Expression::boxed_negative(Expression::boxed_number(4.0)),
+                        Expression::boxed_unary(UnaryOp::Negative, Expression::boxed_number(4.0)),
                         BinaryOp::Multiply,
-                        Expression::boxed_negative(Expression::boxed_number(5.0)),
+                        Expression::boxed_unary(UnaryOp::Negative, Expression::boxed_number(5.0)),
                     ),
                 ),
                 BinaryOp::Subtract,
@@ -819,9 +857,9 @@ mod tests {
                     Expression::boxed_number(3.0),
                     BinaryOp::Add,
                     Expression::boxed_binary(
-                        Expression::boxed_negative(Expression::boxed_number(4.0)),
+                        Expression::boxed_unary(UnaryOp::Negative, Expression::boxed_number(4.0)),
                         BinaryOp::Multiply,
-                        Expression::boxed_negative(Expression::boxed_number(5.0)),
+                        Expression::boxed_unary(UnaryOp::Negative, Expression::boxed_number(5.0)),
                     ),
                 ),
                 BinaryOp::Subtract,

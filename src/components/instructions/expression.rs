@@ -1,15 +1,15 @@
 use crate::components as lox;
 use lox::instructions::node::*;
 use Literal::*;
-use Unary::*;
 
 #[derive(Debug)]
 #[derive(PartialEq)]
 #[derive(Clone)]
 pub enum Expression {
-    LExp(Literal),
-    UExp(Unary),
-    BExp(Binary),
+    LitExp(Literal),
+    Unary(UnaryOp, Box<Expression>),
+    Binary { left: Box<Expression>, op: BinaryOp, right: Box<Expression> },
+    Logical { left: Box<Expression>, op: LogicOp, right: Box<Expression> },
     Identifier(String),
     Grouping(Box<Expression>),
     Assignment(String, Box<Expression>),
@@ -18,35 +18,38 @@ pub enum Expression {
 use Expression::*;
 impl Expression {
     pub fn boxed_literal(l: Literal) -> Box<Expression> {
-        Box::new(LExp(l))
+        Box::new(LitExp(l))
     }
 
     pub fn boxed_number(n: f64) -> Box<Expression> {
-        Box::new(LExp(Number(n)))
+        Box::new(LitExp(Number(n)))
     }
     pub fn boxed_string(s: &str) -> Box<Expression> {
-        Box::new(LExp(StringData(String::from(s))))
+        Box::new(LitExp(StringData(String::from(s))))
     }
     pub fn boxed_bool(b: bool) -> Box<Expression> {
-        Box::new(LExp(Boolean(b)))
+        Box::new(LitExp(Boolean(b)))
     }
     pub fn boxed_nil() -> Box<Expression> {
-        Box::new(LExp(Nil))
+        Box::new(LitExp(Nil))
     }
 
-    pub fn boxed_negative(e: Box<Expression>) -> Box<Expression> {
-        Box::new(UExp(Negative(e)))
+    pub fn boxed_unary(op: UnaryOp, e: Box<Expression>) -> Box<Expression> {
+        Box::new(Unary(op, e))
     }
-    pub fn boxed_not(e: Box<Expression>) -> Box<Expression> {
-        Box::new(UExp(Not(e)))
-    }
-
     pub fn boxed_binary(
         left: Box<Expression>,
-        operator: BinaryOp,
+        op: BinaryOp,
         right: Box<Expression>
     ) -> Box<Expression> {
-        Box::new(BExp(Binary{ left, operator, right }))
+        Box::new(Binary{ left, op, right })
+    }
+    pub fn boxed_logical(
+        left: Box<Expression>,
+        op: LogicOp,
+        right: Box<Expression>
+    ) -> Box<Expression> {
+        Box::new(Logical{ left, op, right })
     }
 
     pub fn boxed_identifier(s: &str) -> Box<Expression> {
