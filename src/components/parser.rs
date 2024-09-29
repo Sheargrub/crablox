@@ -53,7 +53,7 @@ impl LoxParser {
 
     pub fn load_token_vec(&mut self, tokens: Vec<Token>) {
         self.tokens = tokens;
-        if self.inited && !self.valid { 
+        if self.loaded { 
             self.error_strings = Vec::new();
             self.output = Vec::new();
         }
@@ -147,7 +147,6 @@ impl LoxParser {
     fn block(&mut self) -> Result<Vec<Box<Statement>>, ()> {
         let mut block = Vec::new();
         let mut block_valid = true;
-        dbg!(self.peek());
         while !self.is_at_end() && self.consume(TokenData::RightBrace) == None {
             let r = self.statement();
             if let Ok(st) = r { block.push(Box::new(st)); }
@@ -155,7 +154,6 @@ impl LoxParser {
                 block_valid = false;
                 self.synchronize();
             }
-            dbg!(self.peek());
         }
         if block_valid {Ok(block)}
         else { Err(()) }

@@ -23,6 +23,7 @@ impl LoxInterpreter {
             let result = self.evaluate_stmt(s);
             if let Err(e) = result { return Err(e); }
         }
+        self.output.pop();
         Ok(self.output.clone())
     }
 
@@ -37,12 +38,13 @@ impl LoxInterpreter {
             Block(v) => {
                 self.env.lower_scope();
                 for s in v { self.evaluate_stmt(*s)?; }
-                self.env.raise_scope();
+                self.env.raise_scope().expect("Function structure should guarantee valid scope raise");
                 Ok(())
             }
             Print(e) => {
                 let text = &format!("{}", self.evaluate_expr(*e)?);
                 self.output.push_str(text);
+                self.output.push_str("\n");
                 Ok(())
             },
             Expr(e) => {
