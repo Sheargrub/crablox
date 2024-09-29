@@ -9,19 +9,21 @@ use lox::environment::*;
 
 pub struct LoxInterpreter {
     env: LoxEnvironment,
+    output: String,
 }
 
 impl LoxInterpreter {
     pub fn new() -> LoxInterpreter {
-        LoxInterpreter{ env: LoxEnvironment::new() }
+        LoxInterpreter{ env: LoxEnvironment::new(), output: String::new() }
     }
 
-    pub fn interpret(&mut self, program: Vec<Statement>) -> Result<(), String> {
+    pub fn interpret(&mut self, program: Vec<Statement>) -> Result<String, String> {
+        self.output = String::new();
         for s in program {
             let result = self.evaluate_stmt(s);
             if let Err(e) = result { return Err(e); }
         }
-        Ok(())
+        Ok(self.output.clone())
     }
 
     pub fn evaluate_stmt(&mut self, s: Statement) -> Result<(), String> {
@@ -33,11 +35,14 @@ impl LoxInterpreter {
                 Ok(())
             },
             Block(v) => {
-                todo!();
+                self.env.lower_scope();
+                for s in v { self.evaluate_stmt(*s)?; }
+                self.env.raise_scope();
+                Ok(())
             }
             Print(e) => {
-                // TODO: I'd like to get a proper std_out working
-                println!("{}", self.evaluate_expr(*e)?);
+                let text = &format!("{}", self.evaluate_expr(*e)?);
+                self.output.push_str(text);
                 Ok(())
             },
             Expr(e) => {
@@ -329,6 +334,47 @@ mod tests {
             let expected = Number(3.0);
             let result = intp.env.get("k").expect("Failed to retrieve an initialized variable");
             assert_eq!(expected, result, "Variable should equal 3; instead recieved {}", result);
+        }
+
+        #[test]
+        fn test_variable_scope() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "var a = \"global a\";",
+                "var b = \"global b\";",
+                "var c = \"global c\";",
+                "{",
+                "  var a = \"outer a\";",
+                "  var b = \"outer b\";",
+                "  {",
+                "    var a = \"inner a\";",
+                "    print a;",
+                "    print b;",
+                "    print c;",
+                "  }",
+                "  print a;",
+                "  print b;",
+                "  print c;",
+                "}",
+                "print a;",
+                "print b;",
+                "print c;",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = concat!(
+                "inner a",
+                "outer b",
+                "global c",
+                "outer a",
+                "outer b",
+                "global c",
+                "global a",
+                "global b",
+                "global c",
+            );
+
+            assert_eq!(expected, output, "Expected left output; recieved right");
         }
 
     }
