@@ -27,7 +27,7 @@ impl Expression {
     pub fn boxed_string(s: &str) -> Box<Expression> {
         Box::new(LitExp(StringData(String::from(s))))
     }
-    pub fn boxed_bool(b: bool) -> Box<Expression> {
+    pub fn boxed_boolean(b: bool) -> Box<Expression> {
         Box::new(LitExp(Boolean(b)))
     }
     pub fn boxed_nil() -> Box<Expression> {

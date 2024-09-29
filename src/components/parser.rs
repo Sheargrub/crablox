@@ -395,8 +395,8 @@ impl LoxParser {
             TokenData::Identifier(id) => Ok(Expression::boxed_identifier(&id)),
             TokenData::Number(n) => Ok(Expression::boxed_number(n)),
             TokenData::StringData(s) => Ok(Expression::boxed_string(&s)),
-            TokenData::True => Ok(Expression::boxed_bool(true)),
-            TokenData::False => Ok(Expression::boxed_bool(false)),
+            TokenData::True => Ok(Expression::boxed_boolean(true)),
+            TokenData::False => Ok(Expression::boxed_boolean(false)),
             TokenData::Nil => Ok(Expression::boxed_nil()),
 
             TokenData::LeftParen => {
@@ -590,7 +590,7 @@ mod tests {
         #[test]
         fn test_expression_unary_not() {
             let test_str = "!!false";
-            let expected = Expression::boxed_unary(UnaryOp::Not, Expression::boxed_unary(UnaryOp::Not, Expression::boxed_bool(false)));
+            let expected = Expression::boxed_unary(UnaryOp::Not, Expression::boxed_unary(UnaryOp::Not, Expression::boxed_boolean(false)));
             test_expression_generic(test_str, expected);
         }
 
@@ -727,6 +727,33 @@ mod tests {
         }
     }
 
+    mod logical_expressions {
+        use super::*;
+
+        #[test]
+        fn test_expression_and() {
+            let test_str = "false and true";
+            let expected = Expression::boxed_logical(
+                Expression::boxed_boolean(false),
+                LogicOp::And,
+                Expression::boxed_boolean(true),
+            );
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_or() {
+            let test_str = "false or true";
+            let expected = Expression::boxed_logical(
+                Expression::boxed_boolean(false),
+                LogicOp::Or,
+                Expression::boxed_boolean(true),
+            );
+            test_expression_generic(test_str, expected);
+        }
+
+    }
+
     mod compound_expressions {
         use super::*;
 
@@ -745,6 +772,33 @@ mod tests {
                 ),
                 BinaryOp::Subtract,
                 Expression::boxed_number(6.0),
+            );
+            test_expression_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_expression_logic_ops() {
+            let test_str = "1 and 2 or 3 and 4 or 5 and 6";
+            let expected = Expression::boxed_logical(
+                Expression::boxed_logical(
+                    Expression::boxed_logical(
+                        Expression::boxed_number(1.0),
+                        LogicOp::And,
+                        Expression::boxed_number(2.0),
+                    ),
+                    LogicOp::Or,
+                    Expression::boxed_logical(
+                        Expression::boxed_number(3.0),
+                        LogicOp::And,
+                        Expression::boxed_number(4.0),
+                    ),
+                ),
+                LogicOp::Or,
+                Expression::boxed_logical(
+                    Expression::boxed_number(5.0),
+                    LogicOp::And,
+                    Expression::boxed_number(6.0),
+                ),
             );
             test_expression_generic(test_str, expected);
         }
