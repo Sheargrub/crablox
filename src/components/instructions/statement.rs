@@ -8,4 +8,5 @@ pub enum Statement {
     Decl(String, Box<Expression>),
     Expr(Box<Expression>),
     Print(Box<Expression>),
+    Block(Vec<Box<Statement>>),
 }

@@ -32,6 +32,9 @@ impl LoxInterpreter {
                 self.env.define(&id, data);
                 Ok(())
             },
+            Block(v) => {
+                todo!();
+            }
             Print(e) => {
                 // TODO: I'd like to get a proper std_out working
                 println!("{}", self.evaluate_expr(*e)?);

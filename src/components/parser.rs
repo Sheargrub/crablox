@@ -68,16 +68,10 @@ impl LoxParser {
         if self.inited && !self.loaded {
             self.loaded = true;
 
-            while !self.is_at_end() && self.peek().unwrap().data != TokenData::EndOfFile {
+            while !self.is_at_end() && self.consume(TokenData::EndOfFile) == None {
                 let r = self.statement();
                 if let Ok(st) = r {
                     self.output.push(st);
-
-                    let sc = self.consume(TokenData::Semicolon);
-                    if sc == None {
-                        self.add_error("Expected ';' at end of statement.");
-                        self.valid = false;
-                    }
                 }
                 else {
                     self.valid = false;
@@ -114,6 +108,7 @@ impl LoxParser {
                 expr = self.expression()?;
             }
             let d = Statement::Decl(id, expr);
+            self.pass_semicolon();
             Ok(d)
         }
         
@@ -127,20 +122,43 @@ impl LoxParser {
         let next = self.peek();
         if let Some(t) = next {
             match t.data {
+                TokenData::LeftBrace => {
+                    self.advance().expect("If-let condition should guarantee advance()");
+                    Ok(Statement::Block(self.block()?))
+                }
                 TokenData::Print => {
                     self.advance().expect("If-let condition should guarantee advance()");
-                    let e = self.expression()?;
-                    Ok(Statement::Print(e))
+                    let e = Statement::Print(self.expression()?);
+                    self.pass_semicolon();
+                    Ok(e)
                 }
                 _ => { // Expression statement
-                    let e = self.expression()?;
-                    Ok(Statement::Expr(e))
+                    let e = Statement::Expr(self.expression()?);
+                    self.pass_semicolon();
+                    Ok(e)
                 },
             }
         } else {
             self.add_error("Attempted to read a statement while no tokens were present.");
             Err(())
         }
+    }
+
+    fn block(&mut self) -> Result<Vec<Box<Statement>>, ()> {
+        let mut block = Vec::new();
+        let mut block_valid = true;
+        dbg!(self.peek());
+        while !self.is_at_end() && self.consume(TokenData::RightBrace) == None {
+            let r = self.statement();
+            if let Ok(st) = r { block.push(Box::new(st)); }
+            else {
+                block_valid = false;
+                self.synchronize();
+            }
+            dbg!(self.peek());
+        }
+        if block_valid {Ok(block)}
+        else { Err(()) }
     }
 
     fn expression(&mut self) -> Result<Box<Expression>, ()> {
@@ -407,6 +425,14 @@ impl LoxParser {
         else { 
             self.add_error("Ran out of tokens unexpectedly. (This likely indicates a scanner bug.)");
             Err(())
+        }
+    }
+
+    fn pass_semicolon(&mut self) {
+        let sc = self.consume(TokenData::Semicolon);
+        if sc == None {
+            self.add_error("Expected ';' at end of statement.");
+            self.valid = false;
         }
     }
 
@@ -822,10 +848,9 @@ mod tests {
         #[test]
         fn test_program_hello_world() {
             let test_program = concat!(
-                "var my_var = \"Hello, world!\";",
-                "print my_var;",
+                "var my_var = \"Hello, world!\";\n",
+                "print my_var;\n",
             );
-
             let expected = vec![
                 Statement::Decl(
                     String::from("my_var"),
@@ -841,15 +866,14 @@ mod tests {
         #[test]
         fn test_program_assignments() {
             let test_program = concat!(
-                "var i;",
-                "var j = 2;",
-                "var k = 3 + 4;",
-                "i = 3;",
-                "j = 3 - 1;",
-                "k = j + k + 3;",
-                "i = j = k;",
+                "var i;\n",
+                "var j = 2;\n",
+                "var k = 3 + 4;\n",
+                "i = 3;\n",
+                "j = 3 - 1;\n",
+                "k = j + k + 3;\n",
+                "i = j = k;\n",
             );
-            
             let expected = vec![
                 Statement::Decl(
                     String::from("i"),
@@ -906,6 +930,37 @@ mod tests {
                         )
                     )
                 ),
+            ];
+            test_program_generic(test_program, expected);
+        }
+
+        #[test]
+        fn test_program_blocks() {
+            let test_program = concat!(
+                "{}\n",
+                "var global = 23;\n",
+                "{\n",
+                "   var local = 3;\n",
+                "   { print local; }\n",
+                "}\n",
+            );
+            let expected = vec![
+                Statement::Block(vec![]),
+                Statement::Decl(
+                    String::from("global"),
+                    Expression::boxed_number(23.0),
+                ),
+                Statement::Block(vec![
+                    Box::new(Statement::Decl(
+                        String::from("local"),
+                        Expression::boxed_number(3.0),
+                    )),
+                    Box::new(Statement::Block(vec![
+                        Box::new(Statement::Print(
+                            Expression::boxed_identifier("local"),
+                        ))
+                    ])),
+                ]),
             ];
             test_program_generic(test_program, expected);
         }

@@ -81,8 +81,7 @@ mod tests {
     #[test]
     fn test_env_assignment_undeclared() {
         let mut env = LoxEnvironment::new();
-        env.assign("fake_var", Literal::Boolean(true));
-        let err_out = env.get("fakeVar");
+        let err_out = env.assign("fake_var", Literal::Boolean(true));
         if let Err(e) = err_out {
             assert!(e.contains("Undefined variable"));
         } else {
