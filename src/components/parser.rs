@@ -163,7 +163,7 @@ impl LoxParser {
                     let body = Box::new(self.stmt_nestable()?);
                     Ok(Statement::While(condition, body))
                 }
-                TokenData::For => { // TODO: error handling on semicolons may leave a bit to be desired
+                TokenData::For => {
                     self.advance().expect("If-let condition should guarantee advance()");
                     if !self.consume(TokenData::LeftParen).is_some() {
                         self.add_error("Expected '(' after if statement.");
@@ -171,7 +171,7 @@ impl LoxParser {
                     };
                     let mut for_vec: Vec<Box<Statement>> = Vec::new();
     
-                    // Initializer: can take in an expression, declaration, or a simple semicolon
+                    // Initializer: placed directly at the front of the block
                     if !self.consume(TokenData::Semicolon).is_some() {
                         if self.consume(TokenData::Var).is_some() {
                             for_vec.push(Box::new(self.stmt_decl()?)); // passes semicolon implicitly
@@ -180,21 +180,29 @@ impl LoxParser {
                             self.pass_semicolon();
                         }
                     }
-
-                    // Condition: takes in an expression
-                    for_vec.push(Box::new(Statement::Expr(self.expression()?)));
+                    
+                    let cond = self.expression()?;
                     self.pass_semicolon();
                     
-                    // Increment: takes in an expression
-                    for_vec.push(Box::new(Statement::Expr(self.expression()?)));
-
+                    let mut while_body: Vec<Box<Statement>> = Vec::new();
                     if !self.consume(TokenData::RightParen).is_some() {
-                        self.add_error("Expected ')' after for clauses.");
-                        return Err(());
-                    };
+                        let incr = Box::new(Statement::Expr(self.expression()?));
+                        if !self.consume(TokenData::RightParen).is_some() {
+                            self.add_error("Expected ')' after for clauses.");
+                            return Err(());
+                        };
+                        while_body.push(Box::new(self.stmt_nestable()?)); // for loop body
+                        while_body.push(incr);
+                    } else {
+                        while_body.push(Box::new(self.stmt_nestable()?));
+                    }
 
-                    // Body: takes in a statement
-                    for_vec.push(Box::new(self.stmt_nestable()?));
+                    for_vec.push(
+                        Box::new(Statement::While(
+                            cond,
+                            Box::new(Statement::Block(while_body)),
+                        ))
+                    );
 
                     Ok(Statement::Block(for_vec))
                 }
@@ -1024,20 +1032,26 @@ mod tests {
                     String::from("i"),
                     Expression::boxed_number(0.0),
                 )),
-                Box::new(Statement::Expr(Expression::boxed_binary(
-                    Expression::boxed_identifier("i"),
-                    BinaryOp::Less,
-                    Expression::boxed_number(10.0),
-                ))),
-                Box::new(Statement::Expr(Expression::boxed_assignment(
-                    "i",
+                Box::new(Statement::While(
                     Expression::boxed_binary(
                         Expression::boxed_identifier("i"),
-                        BinaryOp::Multiply,
-                        Expression::boxed_number(2.0),
-                    )
-                ))),
-                Box::new(Statement::Print(Expression::boxed_identifier("i"))),
+                        BinaryOp::Less,
+                        Expression::boxed_number(10.0),
+                    ),
+                    Box::new(Statement::Block(vec![
+                        Box::new(Statement::Print(
+                            Expression::boxed_identifier("i"),
+                        )),
+                        Box::new(Statement::Expr(Expression::boxed_assignment(
+                            "i",
+                            Expression::boxed_binary(
+                                Expression::boxed_identifier("i"),
+                                BinaryOp::Multiply,
+                                Expression::boxed_number(2.0),
+                            ),
+                        ))),
+                    ])),
+                )),
             ]);
             test_statement_generic(test_str, expected);
         }

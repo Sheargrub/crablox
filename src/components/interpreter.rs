@@ -60,7 +60,14 @@ impl LoxInterpreter {
                     Ok(())
                 }
             },
-            While(cond, body) => todo!(),
+            While(cond, body) => {
+                // TODO: clone statements here are horrifically inefficient.
+                // Probably need to restructure everything to pass by reference...
+                while is_truthful(self.evaluate_expr(*cond.clone())?) {
+                    self.evaluate_stmt(*body.clone())?;
+                }
+                Ok(())
+            }
         }
     }
 
@@ -478,6 +485,34 @@ mod tests {
 
     mod loops {
         use super::*;
+
+        #[test]
+        fn test_while() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(
+                "var i = 0;\nwhile (i < 5) print i = i + 1;"
+            );
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "1\n2\n3\n4\n5";
+
+            assert_eq!(expected, output, "Expected left output; recieved right");
+        }
+
+        #[test]
+        fn test_for() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(
+                "for (var i = 1; i <= 64; i = i * 2) print i;"
+            );
+            dbg!(&program);
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "1\n2\n4\n8\n16\n32\n64";
+
+            assert_eq!(expected, output, "Expected left output; recieved right");
+        }
+
     }
 
 }

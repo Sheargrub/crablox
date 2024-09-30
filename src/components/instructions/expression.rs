@@ -61,6 +61,5 @@ impl Expression {
     pub fn boxed_assignment(s: &str, e: Box<Expression>) -> Box<Expression> {
         Box::new(Assignment(String::from(s), e))
     }
-
 }
 
