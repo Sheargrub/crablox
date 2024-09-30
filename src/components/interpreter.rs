@@ -60,6 +60,7 @@ impl LoxInterpreter {
                     Ok(())
                 }
             },
+            While(cond, body) => todo!(),
         }
     }
 
@@ -419,6 +420,10 @@ mod tests {
 
             assert_eq!(expected, output, "Expected left output; recieved right");
         }
+    }
+
+    mod conditionals {
+        use super::*;
 
         #[test]
         fn test_if_else() {
@@ -469,6 +474,10 @@ mod tests {
             assert_eq!(expected, output, "Expected left output; recieved right");
         }
 
+    }
+
+    mod loops {
+        use super::*;
     }
 
 }

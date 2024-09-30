@@ -86,13 +86,10 @@ impl LoxParser {
     }
 
     fn statement(&mut self) -> Result<Statement, ()> {
-        let next = self.peek();
-        if let Some(t) = next {
-            if let TokenData::Var = t.data {
-                self.advance().expect("If-let condition should guarantee advance()");
-                self.stmt_decl()
-            }
-            else { self.stmt_nestable() }
+        if self.consume(TokenData::Var).is_some() {
+            self.stmt_decl()
+        } else if let Some(t) = self.peek() {
+            self.stmt_nestable()
         } else {
             self.add_error("Attempted to read a statement while no tokens were present.");
             Err(())
@@ -151,6 +148,55 @@ impl LoxParser {
                     } else {
                         Ok(Statement::If(condition, then_branch, None))
                     }
+                }
+                TokenData::While => {
+                    self.advance().expect("If-let condition should guarantee advance()");
+                    if !self.consume(TokenData::LeftParen).is_some() {
+                        self.add_error("Expected '(' after if statement.");
+                        return Err(());
+                    };
+                    let condition = self.expression()?;
+                    if !self.consume(TokenData::RightParen).is_some() {
+                        self.add_error("Expected ')' after if condition.");
+                        return Err(());
+                    };
+                    let body = Box::new(self.stmt_nestable()?);
+                    Ok(Statement::While(condition, body))
+                }
+                TokenData::For => { // TODO: error handling on semicolons may leave a bit to be desired
+                    self.advance().expect("If-let condition should guarantee advance()");
+                    if !self.consume(TokenData::LeftParen).is_some() {
+                        self.add_error("Expected '(' after if statement.");
+                        return Err(());
+                    };
+                    let mut for_vec: Vec<Box<Statement>> = Vec::new();
+    
+                    // Initializer: can take in an expression, declaration, or a simple semicolon
+                    if !self.consume(TokenData::Semicolon).is_some() {
+                        if self.consume(TokenData::Var).is_some() {
+                            for_vec.push(Box::new(self.stmt_decl()?)); // passes semicolon implicitly
+                        } else {
+                            for_vec.push(Box::new(Statement::Expr(self.expression()?)));
+                            self.pass_semicolon();
+                        }
+                    }
+
+                    // Condition: takes in an expression
+                    for_vec.push(Box::new(Statement::Expr(self.expression()?)));
+                    self.pass_semicolon();
+                    
+                    // Increment: takes in an expression
+                    for_vec.push(Box::new(Statement::Expr(self.expression()?)));
+
+                    if !self.consume(TokenData::RightParen).is_some() {
+                        self.add_error("Expected ')' after for clauses.");
+                        return Err(());
+                    };
+
+                    // Body: takes in a statement
+                    for_vec.push(Box::new(self.stmt_nestable()?));
+
+                    Ok(Statement::Block(for_vec))
                 }
                 _ => { // Expression statement
                     let e = Statement::Expr(self.expression()?);
@@ -958,6 +1004,43 @@ mod tests {
             }
         }
 
+        #[test]
+        fn test_statement_while() {
+            let test_str = "while (true) print \"This is the program that never ends~\";";
+            let expected = Statement::While(
+                Expression::boxed_boolean(true),
+                Box::new(Statement::Print(
+                    Expression::boxed_string("This is the program that never ends~"),
+                )),
+            );
+            test_statement_generic(test_str, expected);
+        }
+
+        #[test]
+        fn test_statement_for() {
+            let test_str = "for (var i = 0; i < 10; i = i * 2) print i;";
+            let expected = Statement::Block(vec![
+                Box::new(Statement::Decl(
+                    String::from("i"),
+                    Expression::boxed_number(0.0),
+                )),
+                Box::new(Statement::Expr(Expression::boxed_binary(
+                    Expression::boxed_identifier("i"),
+                    BinaryOp::Less,
+                    Expression::boxed_number(10.0),
+                ))),
+                Box::new(Statement::Expr(Expression::boxed_assignment(
+                    "i",
+                    Expression::boxed_binary(
+                        Expression::boxed_identifier("i"),
+                        BinaryOp::Multiply,
+                        Expression::boxed_number(2.0),
+                    )
+                ))),
+                Box::new(Statement::Print(Expression::boxed_identifier("i"))),
+            ]);
+            test_statement_generic(test_str, expected);
+        }
     }
 
     mod programs {
@@ -1131,5 +1214,4 @@ mod tests {
             test_program_generic(source, expected);
         }
     }
-
 }
