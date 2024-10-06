@@ -446,10 +446,12 @@ impl LoxParser {
 
     fn call(&mut self, t: Token) -> Result<Box<Expression>, ()> {
         let line = t.line;
-        let expr = self.primary(t)?;
-        if self.consume(TokenData::LeftParen).is_some() {
+        let mut expr = self.primary(t)?;
+
+        while self.consume(TokenData::LeftParen).is_some() {
             if self.consume(TokenData::RightParen).is_some() {
-                return Ok(Expression::boxed_call(expr, vec![], line));
+                expr = Expression::boxed_call(expr, vec![], line);
+                continue;
             }
 
             let mut args: Vec<Box<Expression>> = Vec::new();
@@ -459,14 +461,14 @@ impl LoxParser {
             }
 
             if self.consume(TokenData::RightParen).is_some() {
-                Ok(Expression::boxed_call(expr, args, line))
+                expr = Expression::boxed_call(expr, args, line);
             } else {
-                dbg!(&args);
                 self.add_error("Unexpectedly reached end of file while parsing arguments.");
-                Err(())
+                return Err(());
             }
         }
-        else { Ok(expr) }
+
+        Ok(expr)
     }
 
     fn primary(&mut self, t: Token) -> Result<Box<Expression>, ()> {
@@ -1258,6 +1260,7 @@ mod tests {
             let source = concat!(
                 "function();\n",
                 "argumentative(yes, very);\n",
+                "nested(one)(two);\n"
             );
             let expected = vec![
                 Statement::Expr(Expression::boxed_call(
@@ -1272,6 +1275,19 @@ mod tests {
                         Expression::boxed_identifier("very"),
                     ],
                     2,
+                )),
+                Statement::Expr(Expression::boxed_call(
+                    Expression::boxed_call(
+                        Expression::boxed_identifier("nested"),
+                        vec![
+                            Expression::boxed_identifier("one"),
+                        ],
+                        3,
+                    ),
+                    vec![
+                        Expression::boxed_identifier("two"),
+                    ],
+                    3,
                 )),
             ];
             test_program_generic(source, expected);
