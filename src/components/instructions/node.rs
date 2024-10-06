@@ -1,4 +1,5 @@
 use core::fmt;
+use crate::components::instructions::callable::Callable;
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -8,6 +9,7 @@ pub enum Literal {
     StringData(String),
     Boolean(bool),
     Nil,
+    CallLit(Callable),
 }
 
 impl fmt::Display for Literal {
@@ -17,6 +19,7 @@ impl fmt::Display for Literal {
             Literal::StringData(s) => write!(f, "{}", s),
             Literal::Boolean(b) => write!(f, "{}", b),
             Literal::Nil => write!(f, "Nil"),
+            Literal::CallLit(c) => todo!(),
         }
     }
 }

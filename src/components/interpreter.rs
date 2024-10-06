@@ -1,8 +1,9 @@
 use crate::components as lox;
-use lox::instructions::{statement, expression, node};
+use lox::instructions::{statement, expression, node, callable};
 use statement::Statement;
 use expression::Expression;
 use expression::Expression::*;
+use callable::*;
 use node::*;
 use node::Literal::*;
 use lox::environment::*;
@@ -14,7 +15,12 @@ pub struct LoxInterpreter {
 
 impl LoxInterpreter {
     pub fn new() -> LoxInterpreter {
-        LoxInterpreter{ env: LoxEnvironment::new(), output: String::new() }
+        let mut env = LoxEnvironment::new();
+        let native_fns = Callable::native_fn_list();
+        for f in native_fns.iter() {
+            env.define(&f.0, Literal::CallLit(f.1.clone())); // TODO: assess clone call
+        }
+        LoxInterpreter{ env, output: String::new() }
     }
 
     pub fn interpret(&mut self, program: Vec<Statement>) -> Result<String, String> {
@@ -83,7 +89,17 @@ impl LoxInterpreter {
                 let lit = self.evaluate_expr(*boxed_exp)?;
                 Ok(self.env.assign(&id, lit)?)
             }
-            Call(f, t, args) => todo!(),
+            Call(f, args, line) => {
+                let callee = self.evaluate_expr(*f)?;
+                if let CallLit(c) = callee {
+                    if args.len() != c.arity() {
+                        return Err(format!("Expected {} arguments but got {}.", args.len(), c.arity()));
+                    }
+                    todo!()
+                } else {
+                    Err(String::from("Can only call functions and classes."))
+                }
+            }
         }
     }
 

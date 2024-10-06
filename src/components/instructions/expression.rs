@@ -1,6 +1,7 @@
 use crate::components as lox;
 use lox::instructions::node::*;
 use Literal::*;
+use lox::instructions::callable::*;
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -17,8 +18,8 @@ pub enum Expression {
     // usize is used for line numbers in error reporting
     // TODO: maybe should shift the program to use this more broadly?
 }
-
 use Expression::*;
+
 impl Expression {
     pub fn boxed_literal(l: Literal) -> Box<Expression> {
         Box::new(LitExp(l))

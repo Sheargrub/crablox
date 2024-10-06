@@ -461,6 +461,10 @@ impl LoxParser {
             }
 
             if self.consume(TokenData::RightParen).is_some() {
+                if args.len() > 255 {
+                    self.add_error(&concat!("Can't have more than 255 arguments."));
+                    // State is otherwise still valid, so no need to return Err(())
+                }
                 expr = Expression::boxed_call(expr, args, line);
             } else {
                 self.add_error("Unexpectedly reached end of file while parsing arguments.");

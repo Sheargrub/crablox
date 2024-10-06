@@ -1,5 +1,6 @@
 use crate::components as lox;
 use lox::instructions::node::Literal;
+use lox::instructions::callable::Callable;
 use std::collections::HashMap;
 
 #[derive(Debug)]
