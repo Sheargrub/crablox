@@ -83,6 +83,7 @@ impl LoxInterpreter {
                 let lit = self.evaluate_expr(*boxed_exp)?;
                 Ok(self.env.assign(&id, lit)?)
             }
+            Call(f, t, args) => todo!(),
         }
     }
 

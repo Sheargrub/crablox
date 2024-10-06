@@ -440,8 +440,33 @@ impl LoxParser {
                 let u = self.unary(arg)?;
                 Ok(Expression::boxed_unary(UnaryOp::Negative, u))
             },
-            _ => Ok(self.primary(t)?),
+            _ => Ok(self.call(t)?),
         }
+    }
+
+    fn call(&mut self, t: Token) -> Result<Box<Expression>, ()> {
+        let line = t.line;
+        let expr = self.primary(t)?;
+        if self.consume(TokenData::LeftParen).is_some() {
+            if self.consume(TokenData::RightParen).is_some() {
+                return Ok(Expression::boxed_call(expr, vec![], line));
+            }
+
+            let mut args: Vec<Box<Expression>> = Vec::new();
+            loop {
+                args.push(self.expression()?);
+                if !self.consume(TokenData::Comma).is_some() { break; }
+            }
+
+            if self.consume(TokenData::RightParen).is_some() {
+                Ok(Expression::boxed_call(expr, args, line))
+            } else {
+                dbg!(&args);
+                self.add_error("Unexpectedly reached end of file while parsing arguments.");
+                Err(())
+            }
+        }
+        else { Ok(expr) }
     }
 
     fn primary(&mut self, t: Token) -> Result<Box<Expression>, ()> {
@@ -1224,6 +1249,30 @@ mod tests {
                         )),
                     ]))),
                 ),
+            ];
+            test_program_generic(source, expected);
+        }
+
+        #[test]
+        fn test_program_functions() {
+            let source = concat!(
+                "function();\n",
+                "argumentative(yes, very);\n",
+            );
+            let expected = vec![
+                Statement::Expr(Expression::boxed_call(
+                    Expression::boxed_identifier("function"),
+                    vec![],
+                    1,
+                )),
+                Statement::Expr(Expression::boxed_call(
+                    Expression::boxed_identifier("argumentative"),
+                    vec![
+                        Expression::boxed_identifier("yes"),
+                        Expression::boxed_identifier("very"),
+                    ],
+                    2,
+                )),
             ];
             test_program_generic(source, expected);
         }
