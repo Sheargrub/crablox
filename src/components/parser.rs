@@ -87,7 +87,9 @@ impl LoxParser {
 
     fn statement(&mut self) -> Result<Statement, ()> {
         if self.consume(TokenData::Var).is_some() {
-            self.stmt_decl()
+            self.stmt_decl_var()
+        } else if self.consume(TokenData::Fun).is_some() {
+            self.stmt_decl_fun("function")
         } else if let Some(t) = self.peek() {
             self.stmt_nestable()
         } else {
@@ -96,7 +98,7 @@ impl LoxParser {
         }
     }
 
-    fn stmt_decl(&mut self) -> Result<Statement, ()> {
+    fn stmt_decl_var(&mut self) -> Result<Statement, ()> {
         let next = self.advance()?;
 
         if let TokenData::Identifier(id) = next.data {
@@ -111,6 +113,52 @@ impl LoxParser {
         
         else {
             self.add_error("Expected variable name after 'var'.");
+            Err(())
+        }
+    }
+
+    fn stmt_decl_fun(&mut self, context: &str) -> Result<Statement, ()> {
+        let next = self.advance()?;
+
+        if let TokenData::Identifier(name) = next.data {
+            if !self.consume(TokenData::LeftParen).is_some() {
+                self.add_error(&format!("Expected '(' after {} name.", context));
+                return Err(());
+            };
+
+            let mut args = Vec::new();
+
+            if !self.consume(TokenData::RightParen).is_some() {
+                loop {
+                    let next = self.advance()?;
+                    if let TokenData::Identifier(arg) = next.data {
+                        args.push(arg);
+                    } else {
+                        self.add_error(&format!("Expected parameter name."));
+                        return Err(());
+                    }
+
+                    if !self.consume(TokenData::Comma).is_some() { break; }
+                }
+
+                if !self.consume(TokenData::RightParen).is_some() {
+                    self.add_error(&format!("Expected ')' after {} parameters.", context));
+                    return Err(());
+                };
+            }            
+
+            if !self.consume(TokenData::LeftBrace).is_some() {
+                self.add_error(&format!("Expected '{{' before {} body.", context));
+                return Err(());
+            };
+
+            let body = self.block()?;
+
+            Ok(Statement::Fun(name, args, body))
+        }
+
+        else {
+            self.add_error(&format!("Expected {} name.", context));
             Err(())
         }
     }
@@ -174,7 +222,7 @@ impl LoxParser {
                     // Initializer: placed directly at the front of the block
                     if !self.consume(TokenData::Semicolon).is_some() {
                         if self.consume(TokenData::Var).is_some() {
-                            for_vec.push(Box::new(self.stmt_decl()?)); // passes semicolon implicitly
+                            for_vec.push(Box::new(self.stmt_decl_var()?)); // passes semicolon implicitly
                         } else {
                             for_vec.push(Box::new(Statement::Expr(self.expression()?)));
                             self.pass_semicolon();
@@ -1260,11 +1308,12 @@ mod tests {
         }
 
         #[test]
-        fn test_program_functions() {
+        fn test_program_function_defs() {
             let source = concat!(
                 "function();\n",
                 "argumentative(yes, very);\n",
-                "nested(one)(two);\n"
+                "nested(one)(two);\n",
+                "\"This isn't a function, but that's the interpreter's problem\"();\n",
             );
             let expected = vec![
                 Statement::Expr(Expression::boxed_call(
@@ -1293,6 +1342,40 @@ mod tests {
                     ],
                     3,
                 )),
+                Statement::Expr(Expression::boxed_call(
+                    Expression::boxed_string("This isn't a function, but that's the interpreter's problem"),
+                    vec![],
+                    4,
+                )),
+            ];
+            test_program_generic(source, expected);
+        }
+
+        #[test]
+        fn test_program_function_calls() {
+            let source = concat!(
+                "fun shortFunction() {}\n",
+                "fun longFunction(arg1, arg2) {\n",
+                "   clock();\n",
+                "}\n",
+            );
+            let expected = vec![
+                Statement::Fun(
+                    String::from("shortFunction"),
+                    vec![],
+                    vec![],
+                ),
+                Statement::Fun(
+                    String::from("longFunction"),
+                    vec![String::from("arg1"), String::from("arg2")],
+                    vec![
+                        Box::new(Statement::Expr(Expression::boxed_call(
+                            Expression::boxed_identifier("clock"),
+                            vec![],
+                            3,
+                        ))),
+                    ],
+                ),
             ];
             test_program_generic(source, expected);
         }

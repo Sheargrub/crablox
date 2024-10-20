@@ -1,6 +1,7 @@
 use crate::components as lox;
 use lox::instructions::node::*;
 use lox::instructions::expression::*;
+use Expression::Identifier;
 use lox::instructions::statement::*;
 use lox::interpreter::LoxInterpreter;
 
@@ -20,14 +21,18 @@ impl Callable {
 
     pub fn arity(&self) -> usize {
         match self {
-            Function(e) => {todo!();},
+            Function(e) => {
+                todo!();
+            },
             Clock => 0,
         }
     }
 
     pub fn call(&self, args: Vec<Box<Expression>>, interpreter: &LoxInterpreter) -> Result<Literal, String> {
         match self {
-            Function(e) => {todo!();},
+            Function(e) => {
+                todo!();
+            },
             Clock => {
                 let now = std::time::Instant::now();
                 Ok(Literal::Number(now.elapsed().as_secs_f64()))

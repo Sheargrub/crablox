@@ -11,4 +11,5 @@ pub enum Statement {
     Block(Vec<Box<Statement>>),
     If(Box<Expression>, Box<Statement>, Option<Box<Statement>>),
     While(Box<Expression>, Box<Statement>),
+    Fun(String, Vec<String>, Vec<Box<Statement>>), // The strings are unwrapped identifiers
 }

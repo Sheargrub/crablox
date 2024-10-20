@@ -74,6 +74,9 @@ impl LoxInterpreter {
                 }
                 Ok(())
             }
+            Fun(name, args, body) => {
+                todo!();
+            }
         }
     }
 
