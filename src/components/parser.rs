@@ -1308,7 +1308,7 @@ mod tests {
         }
 
         #[test]
-        fn test_program_function_defs() {
+        fn test_program_function_calls() {
             let source = concat!(
                 "function();\n",
                 "argumentative(yes, very);\n",
@@ -1352,7 +1352,7 @@ mod tests {
         }
 
         #[test]
-        fn test_program_function_calls() {
+        fn test_program_function_defs() {
             let source = concat!(
                 "fun shortFunction() {}\n",
                 "fun longFunction(arg1, arg2) {\n",

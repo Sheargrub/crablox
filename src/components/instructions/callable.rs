@@ -4,6 +4,8 @@ use lox::instructions::expression::*;
 use Expression::Identifier;
 use lox::instructions::statement::*;
 use lox::interpreter::LoxInterpreter;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -34,8 +36,9 @@ impl Callable {
                 todo!();
             },
             Clock => {
-                let now = std::time::Instant::now();
-                Ok(Literal::Number(now.elapsed().as_secs_f64()))
+                let now = SystemTime::now();
+                let time_ms = now.duration_since(UNIX_EPOCH).expect("Got time before unix epoch").as_millis() as f64;
+                Ok(Literal::Number(time_ms/1000.0))
             },
         }
     }

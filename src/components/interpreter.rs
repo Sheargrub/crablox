@@ -7,6 +7,7 @@ use callable::*;
 use node::*;
 use node::Literal::*;
 use lox::environment::*;
+use std::vec::*;
 
 pub struct LoxInterpreter {
     env: LoxEnvironment,
@@ -98,7 +99,7 @@ impl LoxInterpreter {
                     if args.len() != c.arity() {
                         return Err(format!("Expected {} arguments but got {}.", args.len(), c.arity()));
                     }
-                    todo!()
+                    Ok(c.call(args, self)?)
                 } else {
                     Err(String::from("Can only call functions and classes."))
                 }
@@ -533,6 +534,26 @@ mod tests {
             assert_eq!(expected, output, "Expected left output; recieved right");
         }
 
+    }
+
+    mod functions {
+        use super::*;
+
+        #[test]
+        fn test_clock() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(
+                // This isn't a perfect test, but at least confirms that
+                // clock() is returning a non-constant, increasing value.
+                // The for loops are just to stall for time.
+                "var a = clock();\nfor (var i = 1; i <= 100; i = i + 1) {for (var j = 1; j <= 100; j = j + 1) {}}\nvar b = clock();\nprint(a == b);\nprint(a<b);"
+            );
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "false\ntrue";
+
+            assert_eq!(expected, output, "clock() does not appear to be outputting strictly increasing values");
+        }
     }
 
 }
