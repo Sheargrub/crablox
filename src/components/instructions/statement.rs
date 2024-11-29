@@ -9,6 +9,7 @@ pub enum Statement {
     Expr(Box<Expression>),
     Print(Box<Expression>),
     Block(Vec<Box<Statement>>),
+    Return(Box<Expression>, usize), // usize is line number for error reporting
     If(Box<Expression>, Box<Statement>, Option<Box<Statement>>),
     While(Box<Expression>, Box<Statement>),
     Fun(String, Vec<String>, Vec<Box<Statement>>), // The strings are unwrapped identifiers

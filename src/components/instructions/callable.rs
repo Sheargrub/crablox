@@ -44,7 +44,8 @@ impl Callable {
                 }
                 let result = interpreter.evaluate_stmt(Statement::Block(body.clone()));
                 match result {
-                    Ok(_) => Ok(Literal::Nil),
+                    Ok(None) => Ok(Literal::Nil),
+                    Ok(Some(lit)) => Ok(lit),
                     Err(s) => Err(s),
                 }
             },

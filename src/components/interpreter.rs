@@ -40,51 +40,65 @@ impl LoxInterpreter {
         Ok(self.output.clone())
     }
 
-    pub fn evaluate_stmt(&mut self, s: Statement) -> Result<(), String> {
+    // Returns Some if returning a value from a block, None for other valid outcomes
+    pub fn evaluate_stmt(&mut self, s: Statement) -> Result<Option<Literal>, String> {
         use Statement::*;
         match s {
             Decl(id, expr) => {
                 let data = self.evaluate_expr(*expr)?;
                 self.env.define(&id, data);
-                Ok(())
+                Ok(None)
             },
             Block(v) => {
                 self.env.lower_scope();
-                for s in v { self.evaluate_stmt(*s)?; }
+                for s in v {
+                    let current = self.evaluate_stmt(*s)?;
+                    if let Some(lit) = current {
+                        self.env.raise_scope().expect("Block execution structure should guarantee valid scope raise");
+                        return Ok(Some(lit));
+                    }
+                }
                 self.env.raise_scope().expect("Block execution structure should guarantee valid scope raise");
-                Ok(())
+                Ok(None)
             }
             Print(e) => {
                 let text = &format!("{}", self.evaluate_expr(*e)?);
                 self.output.push_str(text);
                 self.output.push_str("\n");
-                Ok(())
+                Ok(None)
             },
             Expr(e) => {
                 self.evaluate_expr(*e)?;
-                Ok(())
+                Ok(None)
             },
+            Return(e, line) => {
+                let result = self.evaluate_expr(*e)?;
+                Ok(Some(result))
+            }
             If(cond, then_branch, else_option) => {
                 if is_truthful(self.evaluate_expr(*cond)?) {
                     self.evaluate_stmt(*then_branch)
                 } else if let Some(else_branch) = else_option {
                     self.evaluate_stmt(*else_branch)
                 } else {
-                    Ok(())
+                    Ok(None)
                 }
             },
             While(cond, body) => {
                 // TODO: clone statements here are horrifically inefficient.
                 // Probably need to restructure everything to pass by reference...
                 while is_truthful(self.evaluate_expr(*cond.clone())?) {
-                    self.evaluate_stmt(*body.clone())?;
+                    let current = self.evaluate_stmt(*body.clone())?;
+                    if let Some(lit) = current {
+                        return Ok(Some(lit));
+                    }
                 }
-                Ok(())
+                Ok(None)
             }
             Fun(name, args, body) => {
                 let data = Callable::Function(name.clone(), args, body);
                 self.env.define(&name, Literal::CallLit(data));
-                Ok(())
+                Ok(None)
             }
         }
     }

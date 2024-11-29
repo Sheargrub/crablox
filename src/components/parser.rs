@@ -177,6 +177,12 @@ impl LoxParser {
                     self.pass_semicolon();
                     Ok(e)
                 }
+                TokenData::Return => {
+                    let t = self.advance().expect("If-let condition should guarantee advance()");
+                    let e = Statement::Return(self.expression()?, t.line);
+                    self.pass_semicolon();
+                    Ok(e)
+                }
                 TokenData::If => {
                     self.advance().expect("If-let condition should guarantee advance()");
                     if !self.consume(TokenData::LeftParen).is_some() {
