@@ -24,6 +24,12 @@ impl LoxInterpreter {
         LoxInterpreter{ env, output: String::new() }
     }
 
+    // This is mainly a helper function to let functions add variables.
+    // Don't love that it's visible as an interface to the end-user, may rework.
+    pub fn define_external(&mut self, name: &str, value: Literal) {
+        self.env.define(name, value);
+    }
+
     pub fn interpret(&mut self, program: Vec<Statement>) -> Result<String, String> {
         self.output = String::new();
         for s in program {
@@ -45,7 +51,7 @@ impl LoxInterpreter {
             Block(v) => {
                 self.env.lower_scope();
                 for s in v { self.evaluate_stmt(*s)?; }
-                self.env.raise_scope().expect("Function structure should guarantee valid scope raise");
+                self.env.raise_scope().expect("Block execution structure should guarantee valid scope raise");
                 Ok(())
             }
             Print(e) => {
@@ -76,7 +82,9 @@ impl LoxInterpreter {
                 Ok(())
             }
             Fun(name, args, body) => {
-                todo!();
+                let data = Callable::Function(name.clone(), args, body);
+                self.env.define(&name, Literal::CallLit(data));
+                Ok(())
             }
         }
     }
@@ -99,7 +107,14 @@ impl LoxInterpreter {
                     if args.len() != c.arity() {
                         return Err(format!("Expected {} arguments but got {}.", args.len(), c.arity()));
                     }
-                    Ok(c.call(args, self)?)
+                    let mut evaled_args = Vec::<Literal>::new();
+                    for arg in args.iter() {
+                        evaled_args.push(self.evaluate_expr(*arg.clone())?); // TODO: get rid of clone statement if possible
+                    }
+                    self.env.lower_scope();
+                    let outcome = c.call(evaled_args, self);
+                    self.env.raise_scope().expect("Function execution structure should guarantee valid scope raise");
+                    outcome
                 } else {
                     Err(String::from("Can only call functions and classes."))
                 }

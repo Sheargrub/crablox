@@ -19,7 +19,7 @@ impl fmt::Display for Literal {
             Literal::StringData(s) => write!(f, "{}", s),
             Literal::Boolean(b) => write!(f, "{}", b),
             Literal::Nil => write!(f, "Nil"),
-            Literal::CallLit(c) => todo!(),
+            Literal::CallLit(c) => c.fmt(f),
         }
     }
 }
