@@ -107,6 +107,9 @@ impl LoxInterpreter {
                 self.env.define(&name, Literal::CallLit(data));
                 Ok(None)
             }
+            Class(name, methods) => {
+                todo!();
+            }
         }
     }
 

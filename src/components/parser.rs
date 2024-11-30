@@ -90,6 +90,8 @@ impl LoxParser {
             self.stmt_decl_var()
         } else if self.consume(TokenData::Fun).is_some() {
             self.stmt_decl_fun("function")
+        } else if self.consume(TokenData::Class).is_some() {
+            self.stmt_decl_class()
         } else if let Some(_) = self.peek() {
             self.stmt_nestable()
         } else {
@@ -159,6 +161,38 @@ impl LoxParser {
 
         else {
             self.add_error(&format!("Expected {} name.", context));
+            Err(())
+        }
+    }
+
+    fn stmt_decl_class(&mut self) -> Result<Statement, ()> {
+        let next = self.advance()?;
+
+        if let TokenData::Identifier(name) = next.data {
+            if !self.consume(TokenData::LeftBrace).is_some() {
+                self.add_error("Expected '{' before class body.");
+                return Err(());
+            };
+
+            let mut methods = Vec::new();
+            while !self.is_at_end() && self.peek().unwrap().data != TokenData::RightBrace {
+                let method = self.stmt_decl_fun("method");
+                if let Ok(m) = method { methods.push(Box::new(m)); }
+                else { return Err(()); } // above function will have written the error
+            }
+            
+            if self.is_at_end() {
+                self.add_error("Unexpectedly reached end of file while parsing methods.");
+                Err(())
+            } else {
+                self.advance(); // consumes right brace
+                Ok(Statement::Class(name, methods))
+            }
+
+        }
+        
+        else {
+            self.add_error("Expected class name after 'class'.");
             Err(())
         }
     }
@@ -1380,6 +1414,57 @@ mod tests {
                             vec![],
                             3,
                         ))),
+                    ],
+                ),
+            ];
+            test_program_generic(source, expected);
+        }
+
+        #[test]
+        fn test_program_class_defs() {
+            let source = concat!(
+                "class Breakfast {\n",
+                "    cook() {\n",
+                "        print \"Eggs a-fryin'!\";\n",
+                "    }\n",
+                "    \n",
+                "    serve(who) {\n",
+                "        print \"Enjoy your breakfast, \" + who + \".\";\n",
+                "    }\n",
+                "}",
+            );
+            let expected = vec![
+                Statement::Class(
+                    String::from("Breakfast"),
+                    vec![
+                        Box::new(Statement::Fun(
+                            String::from("cook"),
+                            vec![],
+                            vec![
+                                Box::new(Statement::Print(
+                                    Expression::boxed_string(
+                                        "Eggs a-fryin'!"
+                                    )
+                                )),
+                            ],
+                        )),
+                        Box::new(Statement::Fun(
+                            String::from("serve"),
+                            vec![String::from("who")],
+                            vec![
+                                Box::new(Statement::Print(
+                                    Expression::boxed_binary(
+                                        Expression::boxed_binary(
+                                            Expression::boxed_string("Enjoy your breakfast, "),
+                                            BinaryOp::Add,
+                                            Expression::boxed_identifier("who"),
+                                        ),
+                                        BinaryOp::Add,
+                                        Expression::boxed_string("."),
+                                    )
+                                )),
+                            ],
+                        )),
                     ],
                 ),
             ];

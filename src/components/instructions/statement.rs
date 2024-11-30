@@ -13,4 +13,5 @@ pub enum Statement {
     If(Box<Expression>, Box<Statement>, Option<Box<Statement>>),
     While(Box<Expression>, Box<Statement>),
     Fun(String, Vec<String>, Vec<Box<Statement>>), // The strings are unwrapped identifiers
+    Class(String, Vec<Box<Statement>>), // The statements should all be function declarations
 }
