@@ -1,7 +1,6 @@
 use crate::components as lox;
 use lox::instructions::node::*;
 use Literal::*;
-use lox::instructions::callable::*;
 
 #[derive(Debug)]
 #[derive(PartialEq)]

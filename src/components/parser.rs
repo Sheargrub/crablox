@@ -90,7 +90,7 @@ impl LoxParser {
             self.stmt_decl_var()
         } else if self.consume(TokenData::Fun).is_some() {
             self.stmt_decl_fun("function")
-        } else if let Some(t) = self.peek() {
+        } else if let Some(_) = self.peek() {
             self.stmt_nestable()
         } else {
             self.add_error("Attempted to read a statement while no tokens were present.");

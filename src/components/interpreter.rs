@@ -8,6 +8,8 @@ use node::*;
 use node::Literal::*;
 use lox::environment::*;
 use std::vec::*;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 pub struct LoxInterpreter {
     env: LoxEnvironment,
@@ -16,7 +18,7 @@ pub struct LoxInterpreter {
 
 impl LoxInterpreter {
     pub fn new() -> LoxInterpreter {
-        let mut env = LoxEnvironment::new();
+        let mut env = LoxEnvironment::new(); // parens prevent overlap w/ function namespace
         let native_fns = Callable::native_fn_list();
         for f in native_fns.iter() {
             env.define(&f.0, Literal::CallLit(f.1.clone())); // TODO: assess clone call
@@ -96,7 +98,10 @@ impl LoxInterpreter {
                 Ok(None)
             }
             Fun(name, args, body) => {
-                let data = Callable::Function(name.clone(), args, body);
+                let inner_func = Callable::Function(name.clone(), name.clone(), args.clone(), body.clone(), None);
+                let mut closure = self.env.spawn_closure();
+                closure.define(&name, Literal::CallLit(inner_func));
+                let data = Callable::Function(name.clone(), name.clone(), args, body, Some(closure));
                 self.env.define(&name, Literal::CallLit(data));
                 Ok(None)
             }
@@ -125,10 +130,7 @@ impl LoxInterpreter {
                     for arg in args.iter() {
                         evaled_args.push(self.evaluate_expr(*arg.clone())?); // TODO: get rid of clone statement if possible
                     }
-                    self.env.lower_scope();
-                    let outcome = c.call(evaled_args, self);
-                    self.env.raise_scope().expect("Function execution structure should guarantee valid scope raise");
-                    outcome
+                    self.call(&c, evaled_args)
                 } else {
                     Err(String::from("Can only call functions and classes."))
                 }
@@ -191,6 +193,38 @@ impl LoxInterpreter {
                 if !left_truthful { Ok(self.evaluate_expr(*right)?) }
                 else { Ok(left_lit) }
             }
+        }
+    }
+
+    fn call(&mut self, callee: &Callable, args: Vec<Literal>) -> Result<Literal, String> {
+        match callee {
+            Callable::Function(name, ref_name, arg_names, body, closure) => {
+                self.env.mount_closure(ref_name).expect("Existence of function should guarantee valid mount");
+                self.env.lower_scope();
+
+                let mut name_iter = arg_names.iter().peekable();
+                let mut arg_iter = args.iter().peekable();
+                while name_iter.peek() != None && arg_iter.peek() != None {
+                    let var = name_iter.next().unwrap_or_else(|| panic!("Impossible unwrap fail"));
+                    let arg = arg_iter.next().unwrap_or_else(|| panic!("Impossible unwrap fail")).clone();
+                    self.env.define(var, arg);
+                }
+
+                let result = self.evaluate_stmt(Statement::Block(body.clone()));
+                let output = match result {
+                    Ok(None) => Ok(Literal::Nil),
+                    Ok(Some(lit)) => Ok(lit),
+                    Err(s) => Err(s),
+                };
+                self.env.raise_scope().expect("Call execution structure should guarantee valid scope raise");
+                self.env.unmount_closure().expect("Call execution structure should guarantee valid unmount");
+                output
+            },
+            Callable::Clock => {
+                let now = SystemTime::now();
+                let time_ms = now.duration_since(UNIX_EPOCH).expect("Got time before unix epoch").as_millis() as f64;
+                Ok(Literal::Number(time_ms/1000.0))
+            },
         }
     }
 }
