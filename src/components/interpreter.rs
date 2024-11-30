@@ -98,10 +98,12 @@ impl LoxInterpreter {
                 Ok(None)
             }
             Fun(name, args, body) => {
-                let inner_func = Callable::Function(name.clone(), name.clone(), args.clone(), body.clone(), None);
+                // ref_name is initialized to (anonymous), a special indicator that has no overlap
+                // with the variable namespace. Typically, the define() calls will overwrite this.
+                let inner_func = Callable::Function(name.clone(), String::from("(anonymous)"), args.clone(), body.clone(), None);
                 let mut closure = self.env.spawn_closure();
                 closure.define(&name, Literal::CallLit(inner_func));
-                let data = Callable::Function(name.clone(), name.clone(), args, body, Some(closure));
+                let data = Callable::Function(name.clone(), String::from("(anonymous)"), args, body, Some(closure));
                 self.env.define(&name, Literal::CallLit(data));
                 Ok(None)
             }
@@ -124,7 +126,7 @@ impl LoxInterpreter {
                 let callee = self.evaluate_expr(*f)?;
                 if let CallLit(c) = callee {
                     if args.len() != c.arity() {
-                        return Err(format!("Expected {} arguments but got {}.", args.len(), c.arity()));
+                        return Err(format!("Expected {} arguments but got {}.", c.arity(), args.len()));
                     }
                     let mut evaled_args = Vec::<Literal>::new();
                     for arg in args.iter() {
@@ -214,17 +216,34 @@ impl LoxInterpreter {
                 let output = match result {
                     Ok(None) => Ok(Literal::Nil),
                     Ok(Some(lit)) => Ok(lit),
-                    Err(s) => Err(s),
+                    Err(e) => Err(e),
                 };
+
                 self.env.raise_scope().expect("Call execution structure should guarantee valid scope raise");
                 self.env.unmount_closure().expect("Call execution structure should guarantee valid unmount");
-                output
+
+                // anonymize before returning
+                match output {
+                    Ok(l) => Ok(self.anonymize(l)),
+                    Err(e) => Err(e),
+                }
+                
             },
             Callable::Clock => {
                 let now = SystemTime::now();
                 let time_ms = now.duration_since(UNIX_EPOCH).expect("Got time before unix epoch").as_millis() as f64;
                 Ok(Literal::Number(time_ms/1000.0))
             },
+        }
+    }
+
+    fn anonymize(&mut self, l: Literal) -> Literal {
+        self.env.define("(anonymous)", l.clone());
+        match l {
+            Literal::CallLit(Callable::Function(name, _, args, body, closure)) => {
+                Literal::CallLit(Callable::Function(name, String::from("(anonymous)"), args, body, closure))
+            },
+            other => other,
         }
     }
 }
@@ -608,7 +627,7 @@ mod tests {
             let program = string_to_program(
                 // This isn't a perfect test, but at least confirms that
                 // clock() is returning a non-constant, increasing value.
-                // The for loops are just to stall for time.
+                // The for loops are just to stall for extra time.
                 "var a = clock();\nfor (var i = 1; i <= 100; i = i + 1) {for (var j = 1; j <= 100; j = j + 1) {}}\nvar b = clock();\nprint(a == b);\nprint(a<b);"
             );
             let output = intp.interpret(program).expect("Error while interpreting program");
@@ -616,6 +635,90 @@ mod tests {
             let expected = "false\ntrue";
 
             assert_eq!(expected, output, "clock() does not appear to be outputting strictly increasing values");
+        }
+
+        #[test]
+        fn test_manyvars_func() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "fun sum(a, b, c, d) {\n",
+                "  return a + b + c + d;\n",
+                "}\n",
+                "\n",
+                "print sum(1, 2, 3, 4);\n",
+                "print sum(4, 5, 6, 7);\n",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "10\n22";
+
+            assert_eq!(expected, output, "4-input sum function provided unexpected output");
+        }
+
+        #[test]
+        fn test_curried_func() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "fun sum(a, b, c) {\n",
+                "  fun sum_inner() {\n",
+                "    return a + b + c;\n",
+                "  }\n",
+                "  return sum_inner;\n",
+                "}\n",
+                "\n",
+                "print sum(1, 2, 3)();\n",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "6";
+
+            assert_eq!(expected, output, "Curried function provided unexpected output");
+        }
+
+        #[test]
+        fn test_recursive_func() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "fun fib(n) {\n",
+                "  if (n <= 1) return n;\n",
+                "  return fib(n - 2) + fib(n - 1);\n",
+                "}\n",
+                "\n",
+                "for (var i = 0; i < 10; i = i + 1) {\n",
+                "  print fib(i);\n",
+                "}\n",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "0\n1\n1\n2\n3\n5\n8\n13\n21\n34";
+
+            assert_eq!(expected, output, "Recursive fibonacci function provided unexpected output");
+        }
+
+        #[test]
+        fn test_closure_func() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "fun makeCounter() {\n",
+                "    var i = 0;\n",
+                "    fun count() {\n",
+                "        i = i + 1;\n",
+                "        print i;\n",
+                "    }\n",
+                "    \n",
+                "    return count;\n",
+                "}\n",
+                "\n",
+                "var counter = makeCounter();\n",
+                "for (var i = 0; i < 5; i = i + 1) {\n",
+                "    counter();\n",
+                "}",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "1\n2\n3\n4\n5";
+
+            assert_eq!(expected, output, "Closure-based counter provided unexpected output");
         }
     }
 

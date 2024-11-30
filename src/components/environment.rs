@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn test_env_access_undeclared() {
-        let env = LoxEnvironment::new();
+        let mut env = LoxEnvironment::new();
         let err_out = env.get("fakeVar");
         if let Err(e) = err_out {
             assert!(e.contains("Undefined variable"));
