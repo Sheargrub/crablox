@@ -14,6 +14,7 @@ pub enum Expression {
     Grouping(Box<Expression>),
     Assignment(String, Box<Expression>),
     Call(Box<Expression>, Vec<Box<Expression>>, usize),
+    Getter(Box<Expression>, String),
     // usize is used for line numbers in error reporting
     // TODO: maybe should shift the program to use this more broadly?
 }
@@ -66,6 +67,9 @@ impl Expression {
     }
     pub fn boxed_call(f: Box<Expression>, args: Vec<Box<Expression>>, line: usize) -> Box<Expression> {
         Box::new(Call(f, args, line))
+    }
+    pub fn boxed_getter(obj: Box<Expression>, name: &str) -> Box<Expression> {
+        Box::new(Getter(obj, String::from(name)))
     }
 }
 

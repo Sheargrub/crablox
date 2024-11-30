@@ -127,7 +127,7 @@ impl LoxInterpreter {
             Assignment(id, boxed_exp) => {
                 let lit = self.evaluate_expr(*boxed_exp)?;
                 Ok(self.env.assign(&id, lit)?)
-            }
+            },
             Call(f, args, line) => {
                 let callee = self.evaluate_expr(*f)?;
                 if let CallLit(c) = callee {
@@ -142,7 +142,8 @@ impl LoxInterpreter {
                 } else {
                     Err(String::from("Can only call functions and classes."))
                 }
-            }
+            },
+            expression::Expression::Getter(_, _) => todo!(),
         }
     }
 

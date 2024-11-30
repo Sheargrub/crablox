@@ -536,28 +536,42 @@ impl LoxParser {
         let line = t.line;
         let mut expr = self.primary(t)?;
 
-        while self.consume(TokenData::LeftParen).is_some() {
-            if self.consume(TokenData::RightParen).is_some() {
-                expr = Expression::boxed_call(expr, vec![], line);
-                continue;
-            }
-
-            let mut args: Vec<Box<Expression>> = Vec::new();
-            loop {
-                args.push(self.expression()?);
-                if !self.consume(TokenData::Comma).is_some() { break; }
-            }
-
-            if self.consume(TokenData::RightParen).is_some() {
-                if args.len() > 255 {
-                    self.add_error(&concat!("Can't have more than 255 arguments."));
-                    // State is otherwise still valid, so no need to return Err(())
+        loop {
+            if self.consume(TokenData::LeftParen).is_some() {
+                if self.consume(TokenData::RightParen).is_some() {
+                    expr = Expression::boxed_call(expr, vec![], line);
+                    continue;
                 }
-                expr = Expression::boxed_call(expr, args, line);
-            } else {
-                self.add_error("Unexpectedly reached end of file while parsing arguments.");
-                return Err(());
+
+                let mut args: Vec<Box<Expression>> = Vec::new();
+                loop {
+                    args.push(self.expression()?);
+                    if !self.consume(TokenData::Comma).is_some() { break; }
+                }
+
+                if self.consume(TokenData::RightParen).is_some() {
+                    if args.len() > 255 {
+                        self.add_error(&concat!("Can't have more than 255 arguments."));
+                        // State is otherwise still valid, so no need to return Err(())
+                    }
+                    expr = Expression::boxed_call(expr, args, line);
+                } else {
+                    self.add_error("Unexpectedly reached end of file while parsing arguments.");
+                    return Err(());
+                }
             }
+
+            else if self.consume(TokenData::Dot).is_some() {
+                let next = self.consume(TokenData::Identifier(String::from("")));
+                if let Some(Token{data: TokenData::Identifier(name), line}) = next {
+                    expr = Expression::boxed_getter(expr, &name);
+                } else {
+                    self.add_error("Expect property name after '.'.");
+                    return Err(());
+                }
+            }
+
+            else { break; }
         }
 
         Ok(expr)
@@ -1467,6 +1481,34 @@ mod tests {
                         )),
                     ],
                 ),
+            ];
+            test_program_generic(source, expected);
+        }
+
+        #[test]
+        fn test_program_getters() {
+            let source = "myFunc().one.two().three;";
+            let expected = vec![
+                Statement::Expr(
+                    Expression::boxed_getter(
+                        Expression::boxed_call(
+                            Expression::boxed_getter(
+                                Expression::boxed_getter(
+                                    Expression::boxed_call(
+                                        Expression::boxed_identifier("myFunc"),
+                                        vec![],
+                                        1
+                                    ),
+                                    "one"
+                                ),
+                                "two"
+                            ),
+                            vec![],
+                            1
+                        ),
+                        "three"
+                    )
+                )
             ];
             test_program_generic(source, expected);
         }
