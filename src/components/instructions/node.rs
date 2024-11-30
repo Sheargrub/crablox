@@ -1,5 +1,6 @@
 use core::fmt;
 use crate::components::instructions::callable::Callable;
+use crate::components::instructions::instance::Instance;
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -10,6 +11,7 @@ pub enum Literal {
     Boolean(bool),
     Nil,
     CallLit(Callable),
+    InstLit(Instance),
 }
 
 impl fmt::Display for Literal {
@@ -20,6 +22,7 @@ impl fmt::Display for Literal {
             Literal::Boolean(b) => write!(f, "{}", b),
             Literal::Nil => write!(f, "Nil"),
             Literal::CallLit(c) => c.fmt(f),
+            Literal::InstLit(i) => i.fmt(f),
         }
     }
 }

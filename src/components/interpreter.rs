@@ -1,11 +1,12 @@
 use crate::components as lox;
-use lox::instructions::{statement, expression, node, callable};
+use lox::instructions::{statement, expression, node, callable, instance};
 use statement::Statement;
 use expression::Expression;
 use expression::Expression::*;
 use callable::*;
 use node::*;
 use node::Literal::*;
+use instance::*;
 use lox::environment::*;
 use std::vec::*;
 use std::time::SystemTime;
@@ -108,7 +109,9 @@ impl LoxInterpreter {
                 Ok(None)
             }
             Class(name, methods) => {
-                todo!();
+                let class = Callable::Class(name.clone(), String::from("(anonymous)"), methods.clone());
+                self.env.define(&name, Literal::CallLit(class));
+                Ok(None)
             }
         }
     }
@@ -232,6 +235,9 @@ impl LoxInterpreter {
                 }
                 
             },
+            Callable::Class(name, ref_name, methods) => {
+                Ok(Literal::InstLit(Instance::new(Callable::Class(name.clone(), ref_name.clone(), methods.clone()))))
+            }
             Callable::Clock => {
                 let now = SystemTime::now();
                 let time_ms = now.duration_since(UNIX_EPOCH).expect("Got time before unix epoch").as_millis() as f64;
@@ -754,6 +760,25 @@ mod tests {
             let expected = "global\nglobal";
 
             assert_eq!(expected, output, "Closure-based counter provided unexpected output");
+        }
+    }
+
+    mod classes {
+        use super::*;
+
+        #[test]
+        fn test_empty_class() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "class Bagel {}",
+                "var bagel = Bagel();",
+                "print bagel;",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "<Bagel instance>";
+
+            assert_eq!(expected, output, "Empty class provided unexpected output");
         }
     }
 

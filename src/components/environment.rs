@@ -40,9 +40,15 @@ impl LoxEnvironment  {
         match &mut self.cur_closure() {
             None => {
                 let last = self.nodes.len()-1;
-                if let Literal::CallLit(Callable::Function(_, ref mut ref_name, _, _, _)) = value {
-                    *ref_name = String::from(name);
-                }
+                match &mut value {
+                    Literal::CallLit(Callable::Function(_, ref mut ref_name, _, _, _)) => {
+                        *ref_name = String::from(name);
+                    },
+                    Literal::CallLit(Callable::Class(_, ref mut ref_name, _)) => {
+                        *ref_name = String::from(name);
+                    },
+                    _ => (),
+                };
                 self.nodes[last].insert(String::from(name), value);
             },
             Some(ref mut closure) => {
