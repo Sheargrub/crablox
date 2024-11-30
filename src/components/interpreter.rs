@@ -310,123 +310,128 @@ mod tests {
         }
     }
 
-    mod unary_expressions {
+    mod expressions {
         use super::*;
 
-        #[test]
-        fn test_expression_unary_not() {
-            test_expression_generic("!!false;", Boolean(false));
+        mod unary_expressions {
+            use super::*;
+
+            #[test]
+            fn test_expression_unary_not() {
+                test_expression_generic("!!false;", Boolean(false));
+            }
+
+            #[test]
+            fn test_expression_unary_negative() {
+                test_expression_generic("-4.3;", Number(-4.3));
+            }
         }
 
-        #[test]
-        fn test_expression_unary_negative() {
-            test_expression_generic("-4.3;", Number(-4.3));
-        }
-    }
+        mod binary_expressions {
+            use super::*;
 
-    mod binary_expressions {
-        use super::*;
+            #[test]
+            fn test_expression_modulo() {
+                test_expression_generic("5 % 3;", Number(2.0));
+            }
 
-        #[test]
-        fn test_expression_modulo() {
-            test_expression_generic("5 % 3;", Number(2.0));
-        }
+            #[test]
+            fn test_expression_divide() {
+                test_expression_generic("3/5;", Number(0.6));
+            }
 
-        #[test]
-        fn test_expression_divide() {
-            test_expression_generic("3/5;", Number(0.6));
-        }
+            #[test]
+            fn test_expression_multiply() {
+                test_expression_generic("4.1 * 5;", Number(20.5));
+            }
 
-        #[test]
-        fn test_expression_multiply() {
-            test_expression_generic("4.1 * 5;", Number(20.5));
-        }
+            #[test]
+            fn test_expression_add() {
+                test_expression_generic("4.1 + 5;", Number(9.1));
+            }
 
-        #[test]
-        fn test_expression_add() {
-            test_expression_generic("4.1 + 5;", Number(9.1));
-        }
+            #[test]
+            fn test_expression_subtract() {
+                test_expression_generic("4.1 - 5;", Number(4.1-5.0));
+            }
 
-        #[test]
-        fn test_expression_subtract() {
-            test_expression_generic("4.1 - 5;", Number(4.1-5.0));
-        }
+            #[test]
+            fn test_expression_less() {
+                test_expression_generic("4.1 < 5;", Boolean(true));
+            }
 
-        #[test]
-        fn test_expression_less() {
-            test_expression_generic("4.1 < 5;", Boolean(true));
-        }
+            #[test]
+            fn test_expression_less_equal() {
+                test_expression_generic("4.1 <= 5;", Boolean(true));
+            }
 
-        #[test]
-        fn test_expression_less_equal() {
-            test_expression_generic("4.1 <= 5;", Boolean(true));
-        }
+            #[test]
+            fn test_expression_greater() {
+                test_expression_generic("4.1 > 5;", Boolean(false));
+            }
 
-        #[test]
-        fn test_expression_greater() {
-            test_expression_generic("4.1 > 5;", Boolean(false));
-        }
+            #[test]
+            fn test_expression_greater_equal() {
+                test_expression_generic("4.1 >= 5;", Boolean(false));
+            }
 
-        #[test]
-        fn test_expression_greater_equal() {
-            test_expression_generic("4.1 >= 5;", Boolean(false));
-        }
+            #[test]
+            fn test_expression_equal() {
+                test_expression_generic("4.1 == 5;", Boolean(false));
+            }
 
-        #[test]
-        fn test_expression_equal() {
-            test_expression_generic("4.1 == 5;", Boolean(false));
-        }
-
-        #[test]
-        fn test_expression_not_equal() {
-            test_expression_generic("4.1 != 5;", Boolean(true));
-        }
-    }
-
-    mod logical_expressions {
-        use super::*;
-
-        #[test]
-        fn test_expression_and() {
-            let test_str = "3.0 and 0.0;";
-            let expected = Number(0.0);
-            test_expression_generic(test_str, expected);
-            let test_str = "nil and 0.0;";
-            let expected = Nil;
-            test_expression_generic(test_str, expected);
+            #[test]
+            fn test_expression_not_equal() {
+                test_expression_generic("4.1 != 5;", Boolean(true));
+            }
         }
 
-        #[test]
-        fn test_expression_or() {
-            let test_str = "3.0 or 0.0;";
-            let expected = Number(3.0);
-            test_expression_generic(test_str, expected);
-            let test_str = "nil or 0.0;";
-            let expected = Number(0.0);
-            test_expression_generic(test_str, expected);
-        }
-    }
+        mod logical_expressions {
+            use super::*;
 
-    mod compound_expressions {
-        use super::*;
+            #[test]
+            fn test_expression_and() {
+                let test_str = "3.0 and 0.0;";
+                let expected = Number(0.0);
+                test_expression_generic(test_str, expected);
+                let test_str = "nil and 0.0;";
+                let expected = Nil;
+                test_expression_generic(test_str, expected);
+            }
 
-        #[test]
-        fn test_expression_math_ops() {
-            let test_str = "3 + -4 * -5 - 6;";
-            test_expression_generic(test_str, Number(17.0));
-        }
-
-        #[test]
-        fn test_expression_comparison() {
-            let test_str = "15 / 5 >= 2 != 1.5 + 1.5 < 2;";
-            test_expression_generic(test_str, Boolean(true));
+            #[test]
+            fn test_expression_or() {
+                let test_str = "3.0 or 0.0;";
+                let expected = Number(3.0);
+                test_expression_generic(test_str, expected);
+                let test_str = "nil or 0.0;";
+                let expected = Number(0.0);
+                test_expression_generic(test_str, expected);
+            }
         }
 
-        #[test]
-        fn test_expression_grouping() {
-            let test_str = "(3 + -4) * (-5 - 6);";
-            test_expression_generic(test_str, Number(11.0));
+        mod compound_expressions {
+            use super::*;
+
+            #[test]
+            fn test_expression_math_ops() {
+                let test_str = "3 + -4 * -5 - 6;";
+                test_expression_generic(test_str, Number(17.0));
+            }
+
+            #[test]
+            fn test_expression_comparison() {
+                let test_str = "15 / 5 >= 2 != 1.5 + 1.5 < 2;";
+                test_expression_generic(test_str, Boolean(true));
+            }
+
+            #[test]
+            fn test_expression_grouping() {
+                let test_str = "(3 + -4) * (-5 - 6);";
+                test_expression_generic(test_str, Number(11.0));
+            }
         }
+
     }
 
     mod variables_and_declarations {
@@ -532,92 +537,97 @@ mod tests {
         }
     }
 
-    mod conditionals {
+    mod control_flow {
         use super::*;
 
-        #[test]
-        fn test_if_else() {
-            let mut intp = LoxInterpreter::new();
-            let program = string_to_program(concat!(
-                "if (2 <= 3) print \"Math is working\";\n",
-                "var three = 3;\n",
-                "if (three == 3) {\n",
-                "   print 333;\n",
-                "} else {\n",
-                "   print 4444;\n",
-                "}",
-            ));
-            let output = intp.interpret(program).expect("Error while interpreting program");
-        
-            let expected = concat!(
-                "Math is working\n",
-                "333",
-            );
-
-            assert_eq!(expected, output, "Expected left output; recieved right");
+        mod conditionals {
+            use super::*;
+    
+            #[test]
+            fn test_if_else() {
+                let mut intp = LoxInterpreter::new();
+                let program = string_to_program(concat!(
+                    "if (2 <= 3) print \"Math is working\";\n",
+                    "var three = 3;\n",
+                    "if (three == 3) {\n",
+                    "   print 333;\n",
+                    "} else {\n",
+                    "   print 4444;\n",
+                    "}",
+                ));
+                let output = intp.interpret(program).expect("Error while interpreting program");
+            
+                let expected = concat!(
+                    "Math is working\n",
+                    "333",
+                );
+    
+                assert_eq!(expected, output, "Expected left output; recieved right");
+            }
+    
+            #[test]
+            fn test_logical_short_circuiting() {
+                let mut intp = LoxInterpreter::new();
+                let program = string_to_program(concat!(
+                    "var i; var j; var k;\n",
+                    "(i = 1) or (j = 2);\n",
+                    "print i; print j;\n",
+                    "j or (k = 2);\n",
+                    "print k;\n",
+                    "j and (j = 3);\n",
+                    "print j;\n",
+                    "i and (j = 4);\n",
+                    "print j;\n",
+                ));
+                let output = intp.interpret(program).expect("Error while interpreting program");
+            
+                let expected = concat!(
+                    "1\n",
+                    "Nil\n",
+                    "2\n",
+                    "Nil\n",
+                    "4",
+                );
+    
+                assert_eq!(expected, output, "Expected left output; recieved right");
+            }
+    
         }
-
-        #[test]
-        fn test_logical_short_circuiting() {
-            let mut intp = LoxInterpreter::new();
-            let program = string_to_program(concat!(
-                "var i; var j; var k;\n",
-                "(i = 1) or (j = 2);\n",
-                "print i; print j;\n",
-                "j or (k = 2);\n",
-                "print k;\n",
-                "j and (j = 3);\n",
-                "print j;\n",
-                "i and (j = 4);\n",
-                "print j;\n",
-            ));
-            let output = intp.interpret(program).expect("Error while interpreting program");
-        
-            let expected = concat!(
-                "1\n",
-                "Nil\n",
-                "2\n",
-                "Nil\n",
-                "4",
-            );
-
-            assert_eq!(expected, output, "Expected left output; recieved right");
+    
+        mod loops {
+            use super::*;
+    
+            #[test]
+            fn test_while() {
+                let mut intp = LoxInterpreter::new();
+                let program = string_to_program(
+                    "var i = 0;\nwhile (i < 5) print i = i + 1;"
+                );
+                let output = intp.interpret(program).expect("Error while interpreting program");
+            
+                let expected = "1\n2\n3\n4\n5";
+    
+                assert_eq!(expected, output, "Expected left output; recieved right");
+            }
+    
+            #[test]
+            fn test_for() {
+                let mut intp = LoxInterpreter::new();
+                let program = string_to_program(
+                    "for (var i = 1; i <= 64; i = i * 2) print i;"
+                );
+                dbg!(&program);
+                let output = intp.interpret(program).expect("Error while interpreting program");
+            
+                let expected = "1\n2\n4\n8\n16\n32\n64";
+    
+                assert_eq!(expected, output, "Expected left output; recieved right");
+            }
+    
         }
 
     }
-
-    mod loops {
-        use super::*;
-
-        #[test]
-        fn test_while() {
-            let mut intp = LoxInterpreter::new();
-            let program = string_to_program(
-                "var i = 0;\nwhile (i < 5) print i = i + 1;"
-            );
-            let output = intp.interpret(program).expect("Error while interpreting program");
-        
-            let expected = "1\n2\n3\n4\n5";
-
-            assert_eq!(expected, output, "Expected left output; recieved right");
-        }
-
-        #[test]
-        fn test_for() {
-            let mut intp = LoxInterpreter::new();
-            let program = string_to_program(
-                "for (var i = 1; i <= 64; i = i * 2) print i;"
-            );
-            dbg!(&program);
-            let output = intp.interpret(program).expect("Error while interpreting program");
-        
-            let expected = "1\n2\n4\n8\n16\n32\n64";
-
-            assert_eq!(expected, output, "Expected left output; recieved right");
-        }
-
-    }
-
+    
     mod functions {
         use super::*;
 
@@ -717,6 +727,28 @@ mod tests {
             let output = intp.interpret(program).expect("Error while interpreting program");
         
             let expected = "1\n2\n3\n4\n5";
+
+            assert_eq!(expected, output, "Closure-based counter provided unexpected output");
+        }
+
+        #[test]
+        fn test_static_scoping() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "var a = \"global\";\n",
+                "{\n",
+                "  fun showA() {\n",
+                "    print a;\n",
+                "  }\n",
+                "\n",
+                "  showA();\n",
+                "  var a = \"block\";\n",
+                "  showA();\n",
+                "}\n",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "global\nglobal";
 
             assert_eq!(expected, output, "Closure-based counter provided unexpected output");
         }
