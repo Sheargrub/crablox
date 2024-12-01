@@ -8,7 +8,9 @@ use node::*;
 use node::Literal::*;
 use instance::*;
 use lox::environment::*;
+
 use std::vec::*;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
@@ -102,10 +104,10 @@ impl LoxInterpreter {
             Fun(name, args, body) => {
                 // ref_name is initialized to (anonymous), a special indicator that has no overlap
                 // with the variable namespace. Typically, the define() calls will overwrite this.
-                let inner_func = Callable::Function(name.clone(), String::from("(anonymous)"), args.clone(), body.clone(), None);
+                let inner_func = Callable::Function(name.clone(), String::from("(anonymous)"), args.clone(), body.clone(), None, false);
                 let mut closure = self.env.spawn_closure();
-                closure.define(&name, Literal::CallLit(inner_func));
-                let data = Callable::Function(name.clone(), String::from("(anonymous)"), args, body, Some(closure));
+                closure.borrow_mut().define(&name, Literal::CallLit(inner_func));
+                let data = Callable::Function(name.clone(), String::from("(anonymous)"), args, body, Some(closure), false);
                 self.env.define(&name, Literal::CallLit(data));
                 Ok(None)
             }
@@ -113,7 +115,7 @@ impl LoxInterpreter {
                 let mut methods = HashMap::new();
                 for stmt in method_defs.clone() {
                     if let Fun(fn_name, args, body) = *stmt {
-                        let func = Callable::Function(fn_name.clone(), String::from("(method)"), args, body, Some(self.env.spawn_closure()));
+                        let func = Callable::Function(fn_name.clone(), format!("(method {} {})", name, fn_name), args, body, Some(self.env.spawn_closure()), true);
                         methods.insert(fn_name.clone(), func);
                     }
                     else { panic!("Found non-function statement while processing methods for class {}.", name); } // should be impossible
@@ -235,7 +237,7 @@ impl LoxInterpreter {
 
     fn call(&mut self, callee: &Callable, args: Vec<Literal>) -> Result<Literal, String> {
         match callee {
-            Callable::Function(name, ref_name, arg_names, body, closure) => {
+            Callable::Function(name, ref_name, arg_names, body, closure, is_method) => {
                 self.env.mount_closure(ref_name).expect("Existence of function should guarantee valid mount");
                 self.env.lower_scope();
 
@@ -278,8 +280,8 @@ impl LoxInterpreter {
     fn anonymize(&mut self, l: Literal) -> Literal {
         self.env.define("(anonymous)", l.clone());
         match l {
-            Literal::CallLit(Callable::Function(name, _, args, body, closure)) => {
-                Literal::CallLit(Callable::Function(name, String::from("(anonymous)"), args, body, closure))
+            Literal::CallLit(Callable::Function(name, _, args, body, closure, is_method)) => {
+                Literal::CallLit(Callable::Function(name, String::from("(anonymous)"), args, body, closure, is_method))
             },
             other => other,
         }

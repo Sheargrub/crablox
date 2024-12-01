@@ -5,6 +5,7 @@ use lox::instructions::statement::*;
 use lox::instructions::callable::*;
 use lox::interpreter::LoxInterpreter;
 use lox::environment::LoxEnvironment;
+
 use std::collections::HashMap;
 use std::fmt;
 
