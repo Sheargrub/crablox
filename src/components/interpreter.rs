@@ -9,6 +9,7 @@ use node::Literal::*;
 use instance::*;
 use lox::environment::*;
 use std::vec::*;
+use std::collections::HashMap;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
@@ -108,8 +109,18 @@ impl LoxInterpreter {
                 self.env.define(&name, Literal::CallLit(data));
                 Ok(None)
             }
-            Class(name, methods) => {
-                let class = Callable::Class(name.clone(), String::from("(anonymous)"), methods.clone());
+            Class(name, method_defs) => {
+                let mut methods = HashMap::new();
+                for stmt in method_defs.clone() {
+                    if let Fun(fn_name, args, body) = *stmt {
+                        let func = Callable::Function(fn_name.clone(), String::from("(method)"), args, body, Some(self.env.spawn_closure()));
+                        methods.insert(fn_name.clone(), func);
+                    }
+                    else { panic!("Found non-function statement while processing methods for class {}.", name); } // should be impossible
+                }
+
+                let class = Callable::Class(name.clone(), String::from("(anonymous)"), methods);
+
                 self.env.define(&name, Literal::CallLit(class));
                 Ok(None)
             }
@@ -143,7 +154,24 @@ impl LoxInterpreter {
                     Err(String::from("Can only call functions and classes."))
                 }
             },
-            expression::Expression::Getter(_, _) => todo!(),
+            Getter(obj, name) => {
+                match self.evaluate_expr(*obj) {
+                    Ok(Literal::InstLit(inst)) => Ok(inst.get(&name)?),
+                    Ok(_) => Err(String::from("Only instances have properties.")),
+                    Err(e) => Err(e),
+                }
+            }
+            Setter(obj, name, value) => {
+                match self.evaluate_expr(*obj) {
+                    Ok(Literal::InstLit(mut inst)) => {
+                        let resolved_value = self.evaluate_expr(*value)?;
+                        inst.set(&name, resolved_value);
+                        Ok(inst.get(&name)?)
+                    },
+                    Ok(_) => Err(String::from("Only instances have fields.")),
+                    Err(e) => Err(e),
+                }
+            }
         }
     }
 
@@ -780,6 +808,24 @@ mod tests {
             let expected = "<Bagel instance>";
 
             assert_eq!(expected, output, "Empty class provided unexpected output");
+        }
+
+        #[test]
+        fn test_basic_method() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "class Bacon {\n",
+                "    eat() {\n",
+                "        print \"Crunch crunch crunch!\";\n",
+                "    }\n",
+                "}\n",
+                "Bacon().eat(); // Prints \"Crunch crunch crunch!\"."
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "Crunch crunch crunch!";
+
+            assert_eq!(expected, output, "Basic method provided unexpected output");
         }
     }
 

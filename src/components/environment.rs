@@ -125,13 +125,19 @@ impl LoxEnvironment  {
     pub fn mount_closure(&mut self, name: &str) -> Result<(), String> {
         match &mut self.cur_closure() {
             None => {
-                if let Ok(Literal::CallLit(Callable::Function(_, _, _, _, closure))) = self.get(name) {
+                if (name == "(method)") { // stopgap approach, not terribly robust
+                    self.in_closure = true;
+                    self.closure_name = String::from(name);
+                    self.self_mounts += 1;
+                    Ok(())
+                } else if let Ok(Literal::CallLit(Callable::Function(_, _, _, _, closure))) = self.get(name) {
                     self.in_closure = true;
                     self.closure_name = String::from(name);
                     if let None = closure { self.self_mounts += 1; }
                     Ok(())
+                } else {
+                    Err(format!("Attempted to mount nonexistent closure {}.", name))
                 }
-                else { Err(format!("Attempted to mount nonexistent closure {}.", name)) }
             },
             Some(ref mut closure) => closure.mount_closure(name),
         }

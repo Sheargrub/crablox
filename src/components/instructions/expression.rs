@@ -15,6 +15,7 @@ pub enum Expression {
     Assignment(String, Box<Expression>),
     Call(Box<Expression>, Vec<Box<Expression>>, usize),
     Getter(Box<Expression>, String),
+    Setter(Box<Expression>, String, Box<Expression>), // Object, name, value
     // usize is used for line numbers in error reporting
     // TODO: maybe should shift the program to use this more broadly?
 }
@@ -70,6 +71,9 @@ impl Expression {
     }
     pub fn boxed_getter(obj: Box<Expression>, name: &str) -> Box<Expression> {
         Box::new(Getter(obj, String::from(name)))
+    }
+    pub fn boxed_setter(obj: Box<Expression>, name: &str, value: Box<Expression>) -> Box<Expression> {
+        Box::new(Setter(obj, String::from(name), value))
     }
 }
 

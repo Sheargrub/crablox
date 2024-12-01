@@ -5,6 +5,7 @@ use lox::instructions::statement::*;
 use lox::instructions::callable::*;
 use lox::interpreter::LoxInterpreter;
 use lox::environment::LoxEnvironment;
+use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Debug)]
@@ -12,11 +13,28 @@ use std::fmt;
 #[derive(Clone)]
 pub struct Instance {
     class: Callable,
+    fields: HashMap<String, Literal>,
 }
 
 impl Instance {
-    pub fn new(c: Callable) -> Instance {
-        Instance{class: c}
+    pub fn new(class: Callable) -> Instance {
+        Instance{class, fields: HashMap::new()}
+    }
+
+    pub fn get(&self, name: &str) -> Result<Literal, String> {
+        if let Some(lit) = self.fields.get(name) {
+            Ok(lit.clone())
+        } else {
+            if let Ok(c) = self.class.find_method(name) {
+                Ok(Literal::CallLit(c))
+            } else {
+                Err(format!("Undefined property {}.", name))
+            }
+        }
+    }
+
+    pub fn set(&mut self, name: &str, value: Literal) {
+        self.fields.insert(String::from(name), value);
     }
 }
 

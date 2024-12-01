@@ -327,16 +327,25 @@ impl LoxParser {
     }
 
     fn assignment(&mut self, t: Token) -> Result<Box<Expression>, ()> {
+        // Check for assignment to some variable
         if let TokenData::Identifier(ref id) = t.data {
             if self.consume(TokenData::Equal).is_some() {
-                Ok(Expression::boxed_assignment(id, self.expression()?))
-            } else {
-                self.logic_or(t)
+                return Ok(Expression::boxed_assignment(id, self.expression()?));
             }
         }
-        else {
-            self.logic_or(t)
+
+        let out = self.logic_or(t);
+
+        // Check for setter to some field
+        if let Ok(contents) = out.clone() {
+            if let Expression::Getter(obj, name) = *contents {
+                if self.consume(TokenData::Equal).is_some() {
+                    return Ok(Expression::boxed_setter(obj, &name, self.expression()?));
+                }
+            }
         }
+        
+        out
     }
 
     fn logic_or(&mut self, t: Token) -> Result<Box<Expression>, ()> {
@@ -1507,6 +1516,35 @@ mod tests {
                             1
                         ),
                         "three"
+                    )
+                )
+            ];
+            test_program_generic(source, expected);
+        }
+
+        #[test]
+        fn test_program_setter() {
+            let source = "myFunc().one.two().three = 0;";
+            let expected = vec![
+                Statement::Expr(
+                    Expression::boxed_setter(
+                        Expression::boxed_call(
+                            Expression::boxed_getter(
+                                Expression::boxed_getter(
+                                    Expression::boxed_call(
+                                        Expression::boxed_identifier("myFunc"),
+                                        vec![],
+                                        1
+                                    ),
+                                    "one"
+                                ),
+                                "two"
+                            ),
+                            vec![],
+                            1
+                        ),
+                        "three",
+                        Expression::boxed_number(0.0)
                     )
                 )
             ];

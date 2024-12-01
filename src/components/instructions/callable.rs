@@ -4,6 +4,7 @@ use lox::instructions::expression::*;
 use lox::instructions::statement::*;
 use lox::interpreter::LoxInterpreter;
 use lox::environment::LoxEnvironment;
+use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Debug)]
@@ -11,7 +12,7 @@ use std::fmt;
 #[derive(Clone)]
 pub enum Callable {
     Function(String, String, Vec<String>, Vec<Box<Statement>>, Option<Box<LoxEnvironment>>),
-    Class(String, String, Vec<Box<Statement>>),
+    Class(String, String, HashMap<String, Callable>),
     Clock,
 }
 
@@ -58,6 +59,19 @@ impl Callable {
             Function(_, _, _, _, _) => false,
             Class(_, _, _) => false,
             _ => true,
+        }
+    }
+
+    pub fn find_method(&self, name: &str) -> Result<Callable, String> {
+        match self {
+            Class(class_name, _, methods) => {
+                if let Some(c) = methods.get(name) {
+                    Ok(c.clone())
+                } else {
+                    Err(format!("Undefined property {}.", name))
+                }
+            }
+            _ => Err(format!("Cannot find method on non-class {}.", self.get_name())),
         }
     }
 }
