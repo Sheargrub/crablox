@@ -114,7 +114,7 @@ impl LoxInterpreter {
                 let mut methods = HashMap::new();
                 for stmt in method_defs.clone() {
                     if let Fun(fn_name, args, body) = *stmt {
-                        let func = Callable::Function(fn_name.clone(), args, body, Some(self.env.spawn_closure()), true);
+                        let func = Callable::Function(fn_name.clone(), args, body, Some(self.env.spawn_closure()), fn_name == "init");
                         methods.insert(fn_name.clone(), func);
                     }
                     else { panic!("Found non-function statement while processing methods for class {}.", name); } // should be impossible
@@ -173,8 +173,8 @@ impl LoxInterpreter {
             Setter(obj, name, value) => {
                 match self.evaluate_expr(*obj) {
                     Ok(Literal::InstLit(ref mut inst)) => {
-                        let resolved_value = self.evaluate_expr(*value)?;
-                        inst.set(&name, resolved_value);
+                        let resolved_value = self.evaluate_expr(*value);
+                        inst.set(&name, resolved_value?);
                         Ok(inst.get(&name)?)
                     },
                     Ok(_) => Err(String::from("Only instances have fields.")),
@@ -247,7 +247,7 @@ impl LoxInterpreter {
 
     fn call(&mut self, callee: &mut Callable, args: Vec<Literal>) -> Result<Literal, String> {
         match callee {
-            Callable::Function(name, arg_names, body, ref mut closure, is_method) => {
+            Callable::Function(name, arg_names, body, ref mut closure, is_init) => {
                 self.env.mount_closure(closure);
                 self.env.lower_scope();
 
@@ -260,20 +260,33 @@ impl LoxInterpreter {
                 }
 
                 let result = self.evaluate_stmt(Statement::Block(body.clone()));
-                let output = match result {
+                let mut output = match result {
                     Ok(None) => Ok(Literal::Nil),
                     Ok(Some(lit)) => Ok(lit),
                     Err(e) => Err(e),
                 };
+                if *is_init {
+                    output = match output {
+                        Ok(_) => self.env.get("this"),
+                        Err(e) => Err(e),
+                    };
+                };
 
                 self.env.raise_scope().expect("Call execution structure should guarantee valid scope raise");
                 self.env.unmount_closure().expect("Call execution structure should guarantee valid unmount");
-
+                
                 output
                 
             },
             Callable::Class(name, methods) => {
-                Ok(Literal::InstLit(Instance::new(Callable::Class(name.clone(), methods.clone()))))
+                let inst = Instance::new(Callable::Class(name.clone(), methods.clone()));
+                if inst.has_initializer() {
+                    println!("\nBefore:\n{:?}\n", inst);
+                    let mut init = self.evaluate_expr(Getter(Box::new(LitExp(InstLit(inst.clone()))), String::from("init")));
+                    if let Ok(CallLit(ref mut c)) = init { self.call(c, args)?; }
+                    else { panic!("Initializer failed to resolve to callable.") }
+                }
+                Ok(Literal::InstLit(inst))
             }
             Callable::Clock => {
                 let now = SystemTime::now();
@@ -863,6 +876,52 @@ mod tests {
 
             assert_eq!(expected, output, "Method relying on 'this' provided unexpected output");
         }
+
+        #[test]
+        fn test_initializer() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "class Foo {\n",
+                "    init(one, two) {\n",
+                "        this.foo = one;\n",
+                "        this.bar = two;\n",
+                "        print one + two;\n",
+                "    }\n",
+                "}\n",
+                "\n",
+                "var foo = Foo(\"foo\", \"bar\");\n",
+                "print foo.foo;\n",
+                "print foo.bar;\n",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "foobar\nfoo\nbar";
+
+            assert_eq!(expected, output, "Running class initializer resulted in unexpected output");
+        }
+
+        #[test]
+        fn test_initializer_recall() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "class Foo {\n",
+                "    init() {\n",
+                "        print this;\n",
+                "        return;\n",
+                "        print \"early return didn't work\";\n",
+                "    }\n",
+                "}\n",
+                "\n",
+                "var foo = Foo();\n",
+                "print foo.init();\n",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "<Foo instance>\n<Foo instance>\n<Foo instance>";
+
+            assert_eq!(expected, output, "Running initializer a second time provided unexpected output");
+        }
+
     }
 
 }

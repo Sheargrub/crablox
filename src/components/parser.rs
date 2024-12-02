@@ -20,6 +20,7 @@ use lox_node::*;
 pub enum AccessType {
     NoAccess,
     Class,
+    Initializer,
 }
 use AccessType::*;
 
@@ -165,9 +166,17 @@ impl LoxParser {
                 return Err(());
             };
 
-            let body = self.block()?;
+            let old_access = self.access;
+            if self.access == Class && name == "init" { self.access = Initializer; }
 
-            Ok(Statement::Fun(name, args, body))
+            let body = self.block();
+
+            self.access = old_access;
+
+            match body {
+                Ok(b) => Ok(Statement::Fun(name, args, b)),
+                Err(e) => Err(e),
+            }
         }
 
         else {
@@ -193,12 +202,12 @@ impl LoxParser {
                 let method = self.stmt_decl_fun("method");
                 if let Ok(m) = method { methods.push(Box::new(m)); }
                 else { // stmt_decl_fun will have written the error, so just return
-                    self.access = NoAccess;
+                    self.access = old_access;
                     return Err(());
                 }
             }
             
-            self.access = NoAccess;
+            self.access = old_access;
 
             if self.is_at_end() {
                 self.add_error("Unexpectedly reached end of file while parsing methods.");
@@ -232,9 +241,21 @@ impl LoxParser {
                 }
                 TokenData::Return => {
                     let t = self.advance().expect("If-let condition should guarantee advance()");
+
+                    // If it's just 'return;', fill the blank with a semicolon.
+                    if self.consume(TokenData::Semicolon).is_some() {
+                        return Ok(Statement::Return(Expression::boxed_nil(), t.line));
+                    }
+
+                    // Otherwise, it had better not be in the initializer.
+                    if self.access == Initializer {
+                        self.add_error("Can't return a value from an initializer.");
+                        return Err(());
+                    }
+
                     let e = Statement::Return(self.expression()?, t.line);
                     self.pass_semicolon();
-                    Ok(e)
+                    Ok(e)   
                 }
                 TokenData::If => {
                     self.advance().expect("If-let condition should guarantee advance()");

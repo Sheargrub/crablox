@@ -25,7 +25,10 @@ impl Callable {
     pub fn arity(&self) -> usize {
         match self {
             Function(_, arg_names, _, _, _) => arg_names.len(),
-            Class(_, _) => 0, // TODO
+            Class(_, methods) => {
+                if let Some(c) = methods.get("init") { c.arity() }
+                else { 0 }
+            },
             Clock => 0,
         }
     }
@@ -41,6 +44,14 @@ impl Callable {
     pub fn is_native(&self) -> bool {
         match self {
             Function(_, _, _, _, _) => false,
+            Class(_, _) => false,
+            _ => true,
+        }
+    }
+
+    pub fn is_initializer(&self) -> bool {
+        match self {
+            Function(_, _, _, _, is_init) => *is_init,
             Class(_, _) => false,
             _ => true,
         }

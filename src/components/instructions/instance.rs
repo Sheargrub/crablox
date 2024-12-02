@@ -32,6 +32,14 @@ impl Instance {
         }
     }
 
+    pub fn has_initializer(&self) -> bool {
+        if let Ok(c) = self.class.find_method("init") {
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn set(&mut self, name: &str, value: Literal) {
         self.fields.borrow_mut().insert(String::from(name), value);
     }
