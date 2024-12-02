@@ -12,7 +12,7 @@ use std::cell::RefCell;
 #[derive(Clone)]
 pub enum Callable {
     Function(String, Vec<String>, Vec<Box<Statement>>, Option<Rc<RefCell<LoxEnvironment>>>, bool),
-    Class(String, HashMap<String, Callable>),
+    Class(String, Option<Box<Callable>>, HashMap<String, Callable>),
     Clock,
 }
 
@@ -25,7 +25,7 @@ impl Callable {
     pub fn arity(&self) -> usize {
         match self {
             Function(_, arg_names, _, _, _) => arg_names.len(),
-            Class(_, methods) => {
+            Class(_, _, methods) => {
                 if let Some(c) = methods.get("init") { c.arity() }
                 else { 0 }
             },
@@ -36,7 +36,7 @@ impl Callable {
     pub fn get_name(&self) -> &str {
         match self {
             Function(name, _, _, _, _) => &name,
-            Class(name, _) => &name,
+            Class(name, _, _) => &name,
             Clock => "clock",
         }
     }
@@ -44,7 +44,7 @@ impl Callable {
     pub fn is_native(&self) -> bool {
         match self {
             Function(_, _, _, _, _) => false,
-            Class(_, _) => false,
+            Class(_, _, _) => false,
             _ => true,
         }
     }
@@ -52,16 +52,18 @@ impl Callable {
     pub fn is_initializer(&self) -> bool {
         match self {
             Function(_, _, _, _, is_init) => *is_init,
-            Class(_, _) => false,
+            Class(_, _, _) => false,
             _ => true,
         }
     }
 
     pub fn find_method(&self, name: &str) -> Result<Callable, String> {
         match self {
-            Class(class_name, methods) => {
+            Class(_, super_class, methods) => {
                 if let Some(c) = methods.get(name) {
                     Ok(c.clone())
+                } else if let Some(sc) = super_class {
+                    sc.find_method(name)
                 } else {
                     Err(format!("Undefined property {}.", name))
                 }
@@ -79,7 +81,7 @@ impl Callable {
                 }
                 *closure = temp;
             },
-            Class(_, methods) => {
+            Class(_, _, methods) => {
                 for (_, m) in methods {
                     m.decouple_closures();
                 }
@@ -92,7 +94,7 @@ impl Callable {
 impl fmt::Display for Callable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
-            Class(name, _) => write!(f, "<class {}>", name),
+            Class(name, _, _) => write!(f, "<class {}>", name),
             other => write!(f, "<fn {}>", other.get_name()),
         }
     }

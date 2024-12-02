@@ -120,7 +120,17 @@ impl LoxInterpreter {
                     else { panic!("Found non-function statement while processing methods for class {}.", name); } // should be impossible
                 }
 
-                let class = Callable::Class(name.clone(), methods);
+                let mut super_class = None;
+                if super_name != "" {
+                    let super_eval = self.env.get(&super_name)?;
+                    if let CallLit(Callable::Class(n, sn, md)) = super_eval {
+                        super_class = Some(Box::new(Callable::Class(n, sn, md)));
+                    } else {
+                        return Err(String::from("Superclass must be a class."));
+                    }
+                }
+
+                let class = Callable::Class(name.clone(), super_class, methods);
 
                 self.env.define(&name, Literal::CallLit(class));
                 Ok(None)
@@ -162,8 +172,12 @@ impl LoxInterpreter {
                     Ok(Literal::InstLit(inst)) => {
                         let out = inst.get(&name)?;
                         if let CallLit(Callable::Function(_, _, _, Some(ref c), _)) = out {
-                            c.borrow_mut().define("this", cpy.unwrap());
-                        };
+                            let Literal::InstLit(this) = cpy.unwrap() else { panic!("Copy of an instance was somehow not an instance") };
+                            if let Callable::Class(_, Some(sc), _) = this.get_class() {
+                                c.borrow_mut().define("super", Literal::CallLit(*sc.clone()));  
+                            }
+                            c.borrow_mut().define("this", Literal::InstLit(this));  
+                        }
                         Ok(out)
                     },
                     Ok(_) => Err(String::from("Only instances have properties.")),
@@ -183,6 +197,14 @@ impl LoxInterpreter {
             }
             This => {
                 Ok(self.env.get("this")?)
+            }
+            Super(method) => {
+                let super_class = self.env.get("super")?;
+                if let Literal::CallLit(sc) = super_class {
+                    Ok(Literal::CallLit(sc.find_method(&method)?))
+                } else {
+                    Err(String::from("Call to superclass somehow returned non-method."))
+                }
             }
         }
     }
@@ -278,10 +300,9 @@ impl LoxInterpreter {
                 output
                 
             },
-            Callable::Class(name, methods) => {
-                let inst = Instance::new(Callable::Class(name.clone(), methods.clone()));
+            Callable::Class(name, super_class, methods) => {
+                let inst = Instance::new(Callable::Class(name.clone(), super_class.clone(), methods.clone()));
                 if inst.has_initializer() {
-                    println!("\nBefore:\n{:?}\n", inst);
                     let mut init = self.evaluate_expr(Getter(Box::new(LitExp(InstLit(inst.clone()))), String::from("init")));
                     if let Ok(CallLit(ref mut c)) = init { self.call(c, args)?; }
                     else { panic!("Initializer failed to resolve to callable.") }
@@ -920,6 +941,63 @@ mod tests {
             let expected = "<Foo instance>\n<Foo instance>\n<Foo instance>";
 
             assert_eq!(expected, output, "Running initializer a second time provided unexpected output");
+        }
+
+        #[test]
+        fn test_simple_inheritance() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "class Doughnut {\n",
+                "    cook() {\n",
+                "        print \"Fry until golden brown.\";\n",
+                "    }\n",
+                "}\n",
+                "\n",
+                "class BostonCream < Doughnut {\n",
+                "    cook() {\n",
+                "        super.cook();\n",
+                "        print \"Pipe full of custard and coat with chocolate.\";\n",
+                "    }\n",
+                "}\n",
+                "\n",
+                "BostonCream().cook();",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "Fry until golden brown.\nPipe full of custard and coat with chocolate.";
+
+            assert_eq!(expected, output, "Running simple inherited method provided unexpected output");
+        }
+
+        #[test]
+        fn test_chained_inheritance() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "class A {\n",
+                "  method() {\n",
+                "    print \"A method\";\n",
+                "  }\n",
+                "}\n",
+                "\n",
+                "class B < A {\n",
+                "  method() {\n",
+                "    print \"B method\";\n",
+                "  }\n",
+                "\n",
+                "  test() {\n",
+                "    super.method();\n",
+                "  }\n",
+                "}\n",
+                "\n",
+                "class C < B {}\n",
+                "\n",
+                "C().test();",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "B method";
+
+            assert_eq!(expected, output, "Running method from inheritance chain provided unexpected output");
         }
 
     }

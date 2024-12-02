@@ -44,6 +44,10 @@ impl Instance {
         self.fields.borrow_mut().insert(String::from(name), value);
     }
 
+    pub fn get_class(&self) -> &Callable {
+        &self.class
+    }
+
     pub fn decouple_closures(&mut self) {
         self.class.decouple_closures();
         let fields = self.fields.borrow().clone();

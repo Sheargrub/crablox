@@ -20,7 +20,7 @@ use lox_node::*;
 pub enum AccessType {
     NoAccess,
     Class,
-    Initializer,
+    Subclass,
 }
 use AccessType::*;
 
@@ -34,6 +34,7 @@ pub struct LoxParser {
     loaded: bool,
     valid: bool,
     access: AccessType,
+    is_init: bool,
 }
 
 impl LoxParser {
@@ -48,7 +49,8 @@ impl LoxParser {
         let loaded = false;
         let valid = true;
         let access = NoAccess;
-        LoxParser{tokens, error_strings, output, current, line, inited, loaded, valid, access}
+        let is_init = false;
+        LoxParser{tokens, error_strings, output, current, line, inited, loaded, valid, access, is_init}
     }
 
     pub fn load_string(&mut self, s: &str) -> Result<(), Vec<String>> {
@@ -166,12 +168,12 @@ impl LoxParser {
                 return Err(());
             };
 
-            let old_access = self.access;
-            if self.access == Class && name == "init" { self.access = Initializer; }
+            let old_init = self.is_init;
+            if self.access == Class && name == "init" { self.is_init = true; }
 
             let body = self.block();
 
-            self.access = old_access;
+            self.is_init = old_init;
 
             match body {
                 Ok(b) => Ok(Statement::Fun(name, args, b)),
@@ -211,7 +213,8 @@ impl LoxParser {
             };
 
             let old_access = self.access;
-            self.access = Class;
+            if super_name == "" { self.access = Class; }
+            else { self.access = Subclass; }
 
             let mut methods = Vec::new();
             while !self.is_at_end() && self.peek().unwrap().data != TokenData::RightBrace {
@@ -264,7 +267,7 @@ impl LoxParser {
                     }
 
                     // Otherwise, it had better not be in the initializer.
-                    if self.access == Initializer {
+                    if self.is_init {
                         self.add_error("Can't return a value from an initializer.");
                         return Err(());
                     }
@@ -653,9 +656,27 @@ impl LoxParser {
             TokenData::This => {
                 if self.access == NoAccess {
                     self.add_error("Can't use 'this' outside of a class.");
-                    // no need to synchronize, though - pretty innocuous error.
+                    // no need to synchronize, though.
                 }
                 Ok(Expression::boxed_this())
+            },
+            TokenData::Super => {
+                if self.access != Subclass {
+                    self.add_error("Can't use 'super' outside of a subclass.");
+                    // no need to synchronize, though.
+                }
+                if !self.consume(TokenData::Dot).is_some() {
+                    self.add_error("Expect '.' after 'super'.");
+                    return Err(());
+                }
+                let next = self.advance()?;
+                if let Token { data: TokenData::Identifier(i), line } = next {
+                    Ok(Expression::boxed_super(&i))
+                } else {
+                    self.add_error("Expect superclass method name.");
+                    Err(())
+                }
+                
             },
 
             TokenData::LeftParen => {
@@ -1507,7 +1528,7 @@ mod tests {
         }
 
         #[test]
-        fn test_program_class_defs() {
+        fn test_program_class_def() {
             let source = concat!(
                 "class Breakfast {\n",
                 "    cook() {\n",
@@ -1518,7 +1539,6 @@ mod tests {
                 "        print \"Enjoy your breakfast, \" + who + \".\";\n",
                 "    }\n",
                 "}",
-                "class Continental < Breakfast {}\n",
             );
             let expected = vec![
                 Statement::Class(
@@ -1554,11 +1574,6 @@ mod tests {
                             ],
                         )),
                     ],
-                ),
-                Statement::Class(
-                    String::from("Continental"),
-                    String::from("Breakfast"),
-                    vec![]
                 ),
             ];
             test_program_generic(source, expected);
@@ -1617,6 +1632,86 @@ mod tests {
                         Expression::boxed_number(0.0)
                     )
                 )
+            ];
+            test_program_generic(source, expected);
+        }
+
+        #[test]
+        fn test_program_subclass_def() {
+            let source = concat!(
+                "class Breakfast {\n",
+                "    cook() {\n",
+                "        print \"Eggs a-fryin'!\";\n",
+                "    }\n",
+                "    \n",
+                "    serve(who) {\n",
+                "        print \"Enjoy your breakfast, \" + who + \".\";\n",
+                "    }\n",
+                "}",
+                "class Continental < Breakfast {\n",
+                "    serve(who) {\n",
+                "        print \"You'll need to get it yourself, but there's a charm to that, right?\";\n",
+                "        super.serve(who);\n",
+                "    }\n",
+                "}\n",
+            );
+            let expected = vec![
+                Statement::Class(
+                    String::from("Breakfast"),
+                    String::from(""),
+                    vec![
+                        Box::new(Statement::Fun(
+                            String::from("cook"),
+                            vec![],
+                            vec![
+                                Box::new(Statement::Print(
+                                    Expression::boxed_string(
+                                        "Eggs a-fryin'!"
+                                    )
+                                )),
+                            ],
+                        )),
+                        Box::new(Statement::Fun(
+                            String::from("serve"),
+                            vec![String::from("who")],
+                            vec![
+                                Box::new(Statement::Print(
+                                    Expression::boxed_binary(
+                                        Expression::boxed_binary(
+                                            Expression::boxed_string("Enjoy your breakfast, "),
+                                            BinaryOp::Add,
+                                            Expression::boxed_identifier("who"),
+                                        ),
+                                        BinaryOp::Add,
+                                        Expression::boxed_string("."),
+                                    )
+                                )),
+                            ],
+                        )),
+                    ],
+                ),
+                Statement::Class(
+                    String::from("Continental"),
+                    String::from("Breakfast"),
+                    vec![
+                        Box::new(Statement::Fun(
+                            String::from("serve"),
+                            vec![String::from("who")],
+                            vec![
+                                Box::new(Statement::Print(
+                                    Expression::boxed_string("You'll need to get it yourself, but there's a charm to that, right?"),
+                                )),
+                                Box::new(Statement::Expr(
+                                    Expression::boxed_call(
+                                        Expression::boxed_super("serve"),
+                                        vec![Expression::boxed_identifier("who")],
+                                        12,
+                                    ),
+                                )),
+                            ],
+                        )),
+                    ],
+                ),
             ];
             test_program_generic(source, expected);
         }
