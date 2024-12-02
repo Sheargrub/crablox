@@ -156,15 +156,23 @@ impl LoxInterpreter {
                 }
             },
             Getter(obj, name) => {
-                match self.evaluate_expr(*obj) {
-                    Ok(Literal::InstLit(inst)) => Ok(inst.get(&name)?),
+                let src = self.evaluate_expr(*obj);
+                let cpy = src.clone();
+                match src {
+                    Ok(Literal::InstLit(inst)) => {
+                        let out = inst.get(&name)?;
+                        if let CallLit(Callable::Function(_, _, _, Some(ref c), _)) = out {
+                            c.borrow_mut().define("this", cpy.unwrap());
+                        };
+                        Ok(out)
+                    },
                     Ok(_) => Err(String::from("Only instances have properties.")),
                     Err(e) => Err(e),
                 }
             }
             Setter(obj, name, value) => {
                 match self.evaluate_expr(*obj) {
-                    Ok(Literal::InstLit(mut inst)) => {
+                    Ok(Literal::InstLit(ref mut inst)) => {
                         let resolved_value = self.evaluate_expr(*value)?;
                         inst.set(&name, resolved_value);
                         Ok(inst.get(&name)?)
@@ -172,6 +180,9 @@ impl LoxInterpreter {
                     Ok(_) => Err(String::from("Only instances have fields.")),
                     Err(e) => Err(e),
                 }
+            }
+            This => {
+                Ok(self.env.get("this")?)
             }
         }
     }
@@ -798,6 +809,22 @@ mod tests {
         }
 
         #[test]
+        fn test_basic_fields() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "class Bacon {}\n",
+                "var bacon = Bacon();\n",
+                "bacon.tasty = \"Yep!\";\n",
+                "print bacon.tasty;",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "Yep!";
+
+            assert_eq!(expected, output, "Basic field get provided unexpected output");
+        }
+
+        #[test]
         fn test_basic_method() {
             let mut intp = LoxInterpreter::new();
             let program = string_to_program(concat!(
@@ -813,6 +840,28 @@ mod tests {
             let expected = "Crunch crunch crunch!";
 
             assert_eq!(expected, output, "Basic method provided unexpected output");
+        }
+
+        #[test]
+        fn test_this_access_method() {
+            let mut intp = LoxInterpreter::new();
+            let program = string_to_program(concat!(
+                "class Cake {\n",
+                "    taste() {\n",
+                "        var adjective = \"delicious\";\n",
+                "        print \"The \" + this.flavor + \" cake is \" + adjective + \"!\";\n",
+                "    }\n",
+                "}\n",
+                "\n",
+                "var cake = Cake();\n",
+                "cake.flavor = \"German chocolate\";\n",
+                "cake.taste();",
+            ));
+            let output = intp.interpret(program).expect("Error while interpreting program");
+        
+            let expected = "The German chocolate cake is delicious!";
+
+            assert_eq!(expected, output, "Method relying on 'this' provided unexpected output");
         }
     }
 

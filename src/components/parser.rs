@@ -14,6 +14,15 @@ use lox_statement::Statement;
 use lox_expression::Expression;
 use lox_node::*;
 
+#[derive(Clone)]
+#[derive(Copy)]
+#[derive(PartialEq)]
+pub enum AccessType {
+    NoAccess,
+    Class,
+}
+use AccessType::*;
+
 pub struct LoxParser {
     tokens: Vec<Token>,
     error_strings: Vec<String>,
@@ -23,6 +32,7 @@ pub struct LoxParser {
     inited: bool,
     loaded: bool,
     valid: bool,
+    access: AccessType,
 }
 
 impl LoxParser {
@@ -36,7 +46,8 @@ impl LoxParser {
         let inited = false;
         let loaded = false;
         let valid = true;
-        LoxParser{tokens, error_strings, output, current, line, inited, loaded, valid}
+        let access = NoAccess;
+        LoxParser{tokens, error_strings, output, current, line, inited, loaded, valid, access}
     }
 
     pub fn load_string(&mut self, s: &str) -> Result<(), Vec<String>> {
@@ -174,13 +185,21 @@ impl LoxParser {
                 return Err(());
             };
 
+            let old_access = self.access;
+            self.access = Class;
+
             let mut methods = Vec::new();
             while !self.is_at_end() && self.peek().unwrap().data != TokenData::RightBrace {
                 let method = self.stmt_decl_fun("method");
                 if let Ok(m) = method { methods.push(Box::new(m)); }
-                else { return Err(()); } // above function will have written the error
+                else { // stmt_decl_fun will have written the error, so just return
+                    self.access = NoAccess;
+                    return Err(());
+                }
             }
             
+            self.access = NoAccess;
+
             if self.is_at_end() {
                 self.add_error("Unexpectedly reached end of file while parsing methods.");
                 Err(())
@@ -594,6 +613,13 @@ impl LoxParser {
             TokenData::True => Ok(Expression::boxed_boolean(true)),
             TokenData::False => Ok(Expression::boxed_boolean(false)),
             TokenData::Nil => Ok(Expression::boxed_nil()),
+            TokenData::This => {
+                if self.access == NoAccess {
+                    self.add_error("Can't use 'this' outside of a class.");
+                    // no need to synchronize, though - pretty innocuous error.
+                }
+                Ok(Expression::boxed_this())
+            },
 
             TokenData::LeftParen => {
                 let e = self.expression()?;

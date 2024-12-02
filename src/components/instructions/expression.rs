@@ -16,6 +16,7 @@ pub enum Expression {
     Call(Box<Expression>, Vec<Box<Expression>>, usize),
     Getter(Box<Expression>, String),
     Setter(Box<Expression>, String, Box<Expression>), // Object, name, value
+    This,
     // usize is used for line numbers in error reporting
     // TODO: maybe should shift the program to use this more broadly?
 }
@@ -74,6 +75,9 @@ impl Expression {
     }
     pub fn boxed_setter(obj: Box<Expression>, name: &str, value: Box<Expression>) -> Box<Expression> {
         Box::new(Setter(obj, String::from(name), value))
+    }
+    pub fn boxed_this() -> Box<Expression> {
+        Box::new(This)
     }
 }
 
