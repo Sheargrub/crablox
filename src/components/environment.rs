@@ -2,6 +2,7 @@ use crate::components as lox;
 use lox::instructions::node::Literal;
 use lox::instructions::callable::Callable;
 
+use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
@@ -11,7 +12,7 @@ use std::collections::HashMap;
 pub struct LoxEnvironment {
     nodes: Vec<HashMap<String, Literal>>,
     in_closure: bool,
-    cur_closure: Option<RefCell<Box<LoxEnvironment>>>,
+    cur_closure: Option<Rc<RefCell<LoxEnvironment>>>,
     self_mounts: usize,
 }
 
@@ -21,19 +22,11 @@ impl LoxEnvironment  {
         LoxEnvironment{nodes, in_closure: false, cur_closure: None, self_mounts: 0}
     }
 
-    //debug.
-    pub fn print_cur_closure(&self) {
-        if let Some(c) = &self.cur_closure {
-            c.borrow().print_cur_closure();
-        } else {
-            println!("{:?}", self);
-        }
-    }
-
     pub fn define(&mut self, name: &str, mut value: Literal) {
         match &mut self.cur_closure {
             None => {
                 let last = self.nodes.len()-1;
+
                 self.nodes[last].insert(String::from(name), value);
             },
             Some(ref mut closure) => {
@@ -100,19 +93,18 @@ impl LoxEnvironment  {
         }
     }
 
-    pub fn spawn_closure(&mut self) -> RefCell<Box<LoxEnvironment>> {
+    pub fn spawn_closure(&mut self) -> Rc<RefCell<LoxEnvironment>> {
         match &mut self.cur_closure {
             None => {
                 let mut closure = self.clone();
                 closure.decouple_closures();
-                RefCell::new(Box::new(closure))
+                Rc::new(RefCell::new(closure))
             },
             Some(ref mut closure) => closure.borrow_mut().spawn_closure(),
         }
     }
 
     fn decouple_closures(&mut self) {
-        println!("Doing a decouple call from an env...");
         for node in self.nodes.iter_mut() {
             for (_, val) in node.iter_mut() {
                 match val {
@@ -125,11 +117,13 @@ impl LoxEnvironment  {
     }
 
     // Technical note: "None" is used to represent closure self-reference for the sake of preventing loops.
-    pub fn mount_closure(&mut self, target_closure: &Option<RefCell<Box<LoxEnvironment>>>) {
+    pub fn mount_closure(&mut self, target_closure: &Option<Rc<RefCell<LoxEnvironment>>>) {
         match &mut self.cur_closure {
             None => {
                 if let Some(closure) = target_closure {
                     self.in_closure = true;
+                    println!("\nClosure:");
+                    println!("{:?}\n", closure);
                     self.cur_closure = Some(closure.clone());
                 } else {
                     self.in_closure = true;

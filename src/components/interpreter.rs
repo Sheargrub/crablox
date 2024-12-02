@@ -68,8 +68,6 @@ impl LoxInterpreter {
                 Ok(None)
             }
             Print(e) => {
-                println!("\nFrom print():"); // This tends to be a useful time to inspect env
-                println!("{:?}\n", self.env);
                 //self.env.print_cur_closure();
                 let text = &format!("{}", self.evaluate_expr(*e)?);
                 self.output.push_str(text);
@@ -81,8 +79,6 @@ impl LoxInterpreter {
                 Ok(None)
             },
             Return(e, line) => {
-                println!("\nFrom return():");
-                println!("{:?}\n", self.env);
                 //self.env.print_cur_closure();
                 let result = self.evaluate_expr(*e)?;
                 Ok(Some(result))
@@ -146,8 +142,8 @@ impl LoxInterpreter {
                 Ok(self.env.assign(&id, lit)?)
             },
             Call(f, args, line) => {
-                let callee = self.evaluate_expr(*f)?;
-                if let CallLit(c) = callee {
+                let mut callee = self.evaluate_expr(*f)?;
+                if let CallLit(ref mut c) = callee {
                     if args.len() != c.arity() {
                         return Err(format!("Expected {} arguments but got {}.", c.arity(), args.len()));
                     }
@@ -155,7 +151,7 @@ impl LoxInterpreter {
                     for arg in args.iter() {
                         evaled_args.push(self.evaluate_expr(*arg.clone())?); // TODO: get rid of clone statement if possible
                     }
-                    self.call(&c, evaled_args)
+                    self.call(c, evaled_args)
                 } else {
                     Err(String::from("Can only call functions and classes."))
                 }
@@ -239,12 +235,10 @@ impl LoxInterpreter {
         }
     }
 
-    fn call(&mut self, callee: &Callable, args: Vec<Literal>) -> Result<Literal, String> {
+    fn call(&mut self, callee: &mut Callable, args: Vec<Literal>) -> Result<Literal, String> {
         match callee {
-            Callable::Function(name, arg_names, body, closure, is_method) => {
-                println!("\nBefore func call:"); // This tends to be a useful time to inspect env
-                println!("{:?}\n", self.env);
-                self.env.mount_closure(&closure);
+            Callable::Function(name, arg_names, body, ref mut closure, is_method) => {
+                self.env.mount_closure(closure);
                 self.env.lower_scope();
 
                 let mut name_iter = arg_names.iter().peekable();
@@ -267,9 +261,6 @@ impl LoxInterpreter {
 
                 self.env.raise_scope().expect("Call execution structure should guarantee valid scope raise");
                 self.env.unmount_closure().expect("Call execution structure should guarantee valid unmount");
-
-                println!("\nAfter unmount:"); // This tends to be a useful time to inspect env
-                println!("{:?}\n", self.env);
 
                 output
                 

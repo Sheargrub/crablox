@@ -5,13 +5,14 @@ use lox::instructions::statement::*;
 use lox::environment::LoxEnvironment;
 use std::collections::HashMap;
 use std::fmt;
+use std::rc::Rc;
 use std::cell::RefCell;
 
 #[derive(Debug)]
 #[derive(PartialEq)]
 #[derive(Clone)]
 pub enum Callable {
-    Function(String, Vec<String>, Vec<Box<Statement>>, Option<RefCell<Box<LoxEnvironment>>>, bool),
+    Function(String, Vec<String>, Vec<Box<Statement>>, Option<Rc<RefCell<LoxEnvironment>>>, bool),
     Class(String, HashMap<String, Callable>),
     Clock,
 }
