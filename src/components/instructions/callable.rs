@@ -2,7 +2,6 @@ use crate::components as lox;
 use lox::instructions::node::*;
 use lox::instructions::expression::*;
 use lox::instructions::statement::*;
-use lox::interpreter::LoxInterpreter;
 use lox::environment::LoxEnvironment;
 use std::collections::HashMap;
 use std::fmt;
@@ -74,6 +73,24 @@ impl Callable {
             }
             _ => Err(format!("Cannot find method on non-class {}.", self.get_name())),
         }
+    }
+
+    pub fn decouple_closures(&mut self) {
+        match self {
+            Function(_, _, _, _, ref mut closure, _) => {
+                let mut temp = None;
+                if let Some(inner) = closure {
+                    temp = Some(inner.borrow_mut().spawn_closure());
+                }
+                *closure = temp;
+            },
+            Class(_, _, methods) => {
+                for (_, m) in methods {
+                    m.decouple_closures();
+                }
+            },
+            _ => (),
+        };
     }
 }
 

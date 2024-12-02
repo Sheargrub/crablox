@@ -11,35 +11,18 @@ use std::collections::HashMap;
 pub struct LoxEnvironment {
     nodes: Vec<HashMap<String, Literal>>,
     in_closure: bool,
-    closure_name: String,
+    cur_closure: Option<RefCell<Box<LoxEnvironment>>>,
     self_mounts: usize,
-    none: Option<RefCell<Box<LoxEnvironment>>>, // hacky mutable constant
 }
 
 impl LoxEnvironment  {
     pub fn new() -> LoxEnvironment {
         let nodes = vec![HashMap::new()];
-        LoxEnvironment{nodes, in_closure: false, closure_name: String::from(""), self_mounts: 0, none: None}
-    }
-
-    fn cur_closure(&mut self) -> &mut Option<RefCell<Box<LoxEnvironment>>> {
-        if !self.in_closure {
-            return &mut self.none;
-        } else {
-            let closure_name = self.closure_name.clone();
-            match self.get_internal(&closure_name) {
-                Ok(Literal::CallLit(Callable::Function(_, _, _, _, closure, _))) => {
-                    closure
-                },
-                _ => panic!("Mounted nonexistent closure \"{}\".", closure_name),
-                // In the second case, something has gone badly wrong
-                // and things are likely irrecoverable.
-            }
-        }
+        LoxEnvironment{nodes, in_closure: false, cur_closure: None, self_mounts: 0}
     }
 
     pub fn define(&mut self, name: &str, mut value: Literal) {
-        match &mut self.cur_closure() {
+        match &mut self.cur_closure {
             None => {
                 let last = self.nodes.len()-1;
                 match &mut value {
@@ -60,7 +43,7 @@ impl LoxEnvironment  {
     }
 
     pub fn assign(&mut self, name: &str, value: Literal) -> Result<Literal, String> {
-        match &mut self.cur_closure() {
+        match &mut self.cur_closure {
             None => {
                 let iter = self.nodes.iter_mut().rev();
                 for node in iter {
@@ -86,14 +69,14 @@ impl LoxEnvironment  {
     }
 
     pub fn get(&mut self, name: &str) -> Result<Literal, String> {
-        match &mut self.cur_closure() {
+        match &mut self.cur_closure {
             None => self.get_internal(name).cloned(),
             Some(ref mut closure) => closure.borrow_mut().get(name),
         }
     }
 
     pub fn lower_scope(&mut self){
-        match &mut self.cur_closure() {
+        match &mut self.cur_closure {
             None => {
                 self.nodes.push(HashMap::new())
             },
@@ -104,7 +87,7 @@ impl LoxEnvironment  {
     }
 
     pub fn raise_scope(&mut self) -> Result<(), String> {
-        match &mut self.cur_closure() {
+        match &mut self.cur_closure {
             None => {
                 if self.nodes.len() > 1 {
                     _ = self.nodes.pop();
@@ -118,30 +101,46 @@ impl LoxEnvironment  {
     }
 
     pub fn spawn_closure(&mut self) -> RefCell<Box<LoxEnvironment>> {
-        match &mut self.cur_closure() {
-            None => RefCell::new(Box::new(self.clone())),
+        match &mut self.cur_closure {
+            None => {
+                let mut closure = self.clone();
+                closure.decouple_closures();
+                RefCell::new(Box::new(closure))
+            },
             Some(ref mut closure) => closure.borrow_mut().spawn_closure(),
         }
     }
 
-    pub fn mount_closure(&mut self, name: &str) -> Result<(), String> {
-        match &mut self.cur_closure() {
-            None => {
-                if let Ok(Literal::CallLit(Callable::Function(_, _, _, _, closure, _))) = self.get(name) {
-                    self.in_closure = true;
-                    self.closure_name = String::from(name);
-                    if let None = closure { self.self_mounts += 1; }
-                    Ok(())
-                } else {
-                    Err(format!("Attempted to mount nonexistent closure {}.", name))
+    fn decouple_closures(&mut self) {
+        for node in self.nodes.iter_mut() {
+            for (_, val) in node.iter_mut() {
+                match val {
+                    Literal::CallLit(c) => c.decouple_closures(),
+                    Literal::InstLit(i) => i.decouple_closures(),
+                    _ => (),
                 }
-            },
-            Some(ref mut closure) => closure.borrow_mut().mount_closure(name),
+            }
         }
     }
 
+    // Technical note: "None" is used to represent closure self-reference for the sake of preventing loops.
+    pub fn mount_closure(&mut self, target_closure: &Option<RefCell<Box<LoxEnvironment>>>) {
+        match &mut self.cur_closure {
+            None => {
+                if let Some(closure) = target_closure {
+                    self.in_closure = true;
+                    self.cur_closure = Some(closure.clone());
+                } else {
+                    self.in_closure = true;
+                    self.self_mounts += 1;
+                }
+            },
+            Some(ref mut closure) => closure.borrow_mut().mount_closure(target_closure),
+        };
+    }
+
     pub fn unmount_closure(&mut self) -> Result<(), String> {
-        match &mut self.cur_closure() {
+        match &mut self.cur_closure {
             None => {
                 if self.self_mounts > 0 {
                     self.self_mounts -= 1;
@@ -153,8 +152,7 @@ impl LoxEnvironment  {
             Some(ref mut closure) => {
                 let result = closure.borrow_mut().unmount_closure();
                 if let Err(_) = result {
-                    // Note: if there's any self-mounts below the current mount,
-                    // they'll still need to be dealt with.
+                    // \/ Check for any underlying self-mounts
                     self.in_closure = self.self_mounts > 0;
                 }
                 Ok(())

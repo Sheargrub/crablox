@@ -238,7 +238,7 @@ impl LoxInterpreter {
     fn call(&mut self, callee: &Callable, args: Vec<Literal>) -> Result<Literal, String> {
         match callee {
             Callable::Function(name, ref_name, arg_names, body, closure, is_method) => {
-                self.env.mount_closure(ref_name).expect("Existence of function should guarantee valid mount");
+                self.env.mount_closure(&closure);
                 self.env.lower_scope();
 
                 let mut name_iter = arg_names.iter().peekable();

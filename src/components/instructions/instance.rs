@@ -3,10 +3,9 @@ use lox::instructions::node::*;
 use lox::instructions::expression::*;
 use lox::instructions::statement::*;
 use lox::instructions::callable::*;
-use lox::interpreter::LoxInterpreter;
-use lox::environment::LoxEnvironment;
 
 use std::collections::HashMap;
+use std::cell::RefCell;
 use std::fmt;
 
 #[derive(Debug)]
@@ -36,6 +35,10 @@ impl Instance {
 
     pub fn set(&mut self, name: &str, value: Literal) {
         self.fields.insert(String::from(name), value);
+    }
+
+    pub fn decouple_closures(&mut self) {
+        self.class.decouple_closures();
     }
 }
 
