@@ -68,6 +68,7 @@ impl LoxInterpreter {
                 Ok(None)
             }
             Print(e) => {
+                //println!("{:?}", self.env); // This tends to be a useful time to inspect env
                 let text = &format!("{}", self.evaluate_expr(*e)?);
                 self.output.push_str(text);
                 self.output.push_str("\n");

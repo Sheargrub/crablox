@@ -140,24 +140,26 @@ impl LoxEnvironment  {
     }
 
     pub fn unmount_closure(&mut self) -> Result<(), String> {
+        let mut unset_cur = false;
         match &mut self.cur_closure {
             None => {
                 if self.self_mounts > 0 {
                     self.self_mounts -= 1;
                     self.in_closure = self.self_mounts > 0;
-                    Ok(())
                 }
-                else { Err(format!("Attempted to unmount outermost scope as a closure.")) }
+                else { return Err(format!("Attempted to unmount outermost scope as a closure.")); }
             },
             Some(ref mut closure) => {
                 let result = closure.borrow_mut().unmount_closure();
                 if let Err(_) = result {
                     // \/ Check for any underlying self-mounts
+                    unset_cur = true;
                     self.in_closure = self.self_mounts > 0;
                 }
-                Ok(())
             }
-        }
+        };
+        if (unset_cur) { self.cur_closure = None; }
+        Ok(())
     }
 }
 
