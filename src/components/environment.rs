@@ -1,6 +1,5 @@
 use crate::components as lox;
 use lox::instructions::node::Literal;
-use lox::instructions::callable::Callable;
 
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -22,7 +21,7 @@ impl LoxEnvironment  {
         LoxEnvironment{nodes, in_closure: false, cur_closure: None, self_mounts: 0}
     }
 
-    pub fn define(&mut self, name: &str, mut value: Literal) {
+    pub fn define(&mut self, name: &str, value: Literal) {
         match &mut self.cur_closure {
             None => {
                 let last = self.nodes.len()-1;
@@ -122,8 +121,6 @@ impl LoxEnvironment  {
             None => {
                 if let Some(closure) = target_closure {
                     self.in_closure = true;
-                    println!("\nClosure:");
-                    println!("{:?}\n", closure);
                     self.cur_closure = Some(closure.clone());
                 } else {
                     self.in_closure = true;

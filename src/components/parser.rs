@@ -185,7 +185,7 @@ impl LoxParser {
                 self.add_error("Unexpectedly reached end of file while parsing methods.");
                 Err(())
             } else {
-                self.advance(); // consumes right brace
+                let _ = self.advance(); // consumes right brace
                 Ok(Statement::Class(name, methods))
             }
 

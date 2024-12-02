@@ -1,8 +1,7 @@
 use crate::components as lox;
-use lox::instructions::node::*;
-use lox::instructions::expression::*;
 use lox::instructions::statement::*;
 use lox::environment::LoxEnvironment;
+
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;

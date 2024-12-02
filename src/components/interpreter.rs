@@ -10,7 +10,6 @@ use instance::*;
 use lox::environment::*;
 
 use std::vec::*;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
@@ -105,7 +104,7 @@ impl LoxInterpreter {
             }
             Fun(name, args, body) => {
                 let inner_func = Callable::Function(name.clone(), args.clone(), body.clone(), None, false);
-                let mut closure = self.env.spawn_closure();
+                let closure = self.env.spawn_closure();
                 closure.borrow_mut().define(&name, Literal::CallLit(inner_func));
                 let data = Callable::Function(name.clone(), args, body, Some(closure), false);
                 self.env.define(&name, Literal::CallLit(data));
@@ -255,9 +254,6 @@ impl LoxInterpreter {
                     Ok(Some(lit)) => Ok(lit),
                     Err(e) => Err(e),
                 };
-
-                println!("\nAfter func call:"); // This tends to be a useful time to inspect env
-                println!("{:?}\n", self.env);
 
                 self.env.raise_scope().expect("Call execution structure should guarantee valid scope raise");
                 self.env.unmount_closure().expect("Call execution structure should guarantee valid unmount");

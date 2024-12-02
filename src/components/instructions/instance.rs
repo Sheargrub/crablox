@@ -1,11 +1,8 @@
 use crate::components as lox;
 use lox::instructions::node::*;
-use lox::instructions::expression::*;
-use lox::instructions::statement::*;
 use lox::instructions::callable::*;
 
 use std::collections::HashMap;
-use std::cell::RefCell;
 use std::fmt;
 
 #[derive(Debug)]
