@@ -189,6 +189,22 @@ impl LoxParser {
         let next = self.advance()?;
 
         if let TokenData::Identifier(name) = next.data {
+
+            let mut super_name = String::from("");
+            if self.consume(TokenData::Less).is_some() {
+                let next = self.advance()?;
+                if let TokenData::Identifier(sn) = next.data {
+                    super_name = sn;
+                } else {
+                    self.add_error("Expected superclass name after '<'.");
+                    return Err(());
+                }
+                if super_name == name {
+                    self.add_error("A class can't inherit from itself.");
+                    return Err(());
+                }
+            }
+
             if !self.consume(TokenData::LeftBrace).is_some() {
                 self.add_error("Expected '{' before class body.");
                 return Err(());
@@ -214,7 +230,7 @@ impl LoxParser {
                 Err(())
             } else {
                 let _ = self.advance(); // consumes right brace
-                Ok(Statement::Class(name, methods))
+                Ok(Statement::Class(name, super_name, methods))
             }
 
         }
@@ -1502,10 +1518,12 @@ mod tests {
                 "        print \"Enjoy your breakfast, \" + who + \".\";\n",
                 "    }\n",
                 "}",
+                "class Continental < Breakfast {}\n",
             );
             let expected = vec![
                 Statement::Class(
                     String::from("Breakfast"),
+                    String::from(""),
                     vec![
                         Box::new(Statement::Fun(
                             String::from("cook"),
@@ -1536,6 +1554,11 @@ mod tests {
                             ],
                         )),
                     ],
+                ),
+                Statement::Class(
+                    String::from("Continental"),
+                    String::from("Breakfast"),
+                    vec![]
                 ),
             ];
             test_program_generic(source, expected);

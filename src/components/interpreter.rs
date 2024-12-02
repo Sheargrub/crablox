@@ -110,7 +110,7 @@ impl LoxInterpreter {
                 self.env.define(&name, Literal::CallLit(data));
                 Ok(None)
             }
-            Class(name, method_defs) => {
+            Class(name, super_name, method_defs) => {
                 let mut methods = HashMap::new();
                 for stmt in method_defs.clone() {
                     if let Fun(fn_name, args, body) = *stmt {
