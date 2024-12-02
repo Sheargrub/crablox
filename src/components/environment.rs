@@ -21,19 +21,19 @@ impl LoxEnvironment  {
         LoxEnvironment{nodes, in_closure: false, cur_closure: None, self_mounts: 0}
     }
 
+    //debug.
+    pub fn print_cur_closure(&self) {
+        if let Some(c) = &self.cur_closure {
+            c.borrow().print_cur_closure();
+        } else {
+            println!("{:?}", self);
+        }
+    }
+
     pub fn define(&mut self, name: &str, mut value: Literal) {
         match &mut self.cur_closure {
             None => {
                 let last = self.nodes.len()-1;
-                match &mut value {
-                    Literal::CallLit(Callable::Function(_, ref mut ref_name, _, _, _, _)) => {
-                        *ref_name = String::from(name);
-                    },
-                    Literal::CallLit(Callable::Class(_, ref mut ref_name, _)) => {
-                        *ref_name = String::from(name);
-                    },
-                    _ => (),
-                };
                 self.nodes[last].insert(String::from(name), value);
             },
             Some(ref mut closure) => {
@@ -112,6 +112,7 @@ impl LoxEnvironment  {
     }
 
     fn decouple_closures(&mut self) {
+        println!("Doing a decouple call from an env...");
         for node in self.nodes.iter_mut() {
             for (_, val) in node.iter_mut() {
                 match val {
@@ -158,7 +159,7 @@ impl LoxEnvironment  {
                 }
             }
         };
-        if (unset_cur) { self.cur_closure = None; }
+        if unset_cur { self.cur_closure = None; }
         Ok(())
     }
 }

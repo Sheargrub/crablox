@@ -68,7 +68,9 @@ impl LoxInterpreter {
                 Ok(None)
             }
             Print(e) => {
-                //println!("{:?}", self.env); // This tends to be a useful time to inspect env
+                println!("\nFrom print():"); // This tends to be a useful time to inspect env
+                println!("{:?}\n", self.env);
+                //self.env.print_cur_closure();
                 let text = &format!("{}", self.evaluate_expr(*e)?);
                 self.output.push_str(text);
                 self.output.push_str("\n");
@@ -79,6 +81,9 @@ impl LoxInterpreter {
                 Ok(None)
             },
             Return(e, line) => {
+                println!("\nFrom return():");
+                println!("{:?}\n", self.env);
+                //self.env.print_cur_closure();
                 let result = self.evaluate_expr(*e)?;
                 Ok(Some(result))
             }
@@ -103,12 +108,10 @@ impl LoxInterpreter {
                 Ok(None)
             }
             Fun(name, args, body) => {
-                // ref_name is initialized to (anonymous), a special indicator that has no overlap
-                // with the variable namespace. Typically, the define() calls will overwrite this.
-                let inner_func = Callable::Function(name.clone(), String::from("(anonymous)"), args.clone(), body.clone(), None, false);
+                let inner_func = Callable::Function(name.clone(), args.clone(), body.clone(), None, false);
                 let mut closure = self.env.spawn_closure();
                 closure.borrow_mut().define(&name, Literal::CallLit(inner_func));
-                let data = Callable::Function(name.clone(), String::from("(anonymous)"), args, body, Some(closure), false);
+                let data = Callable::Function(name.clone(), args, body, Some(closure), false);
                 self.env.define(&name, Literal::CallLit(data));
                 Ok(None)
             }
@@ -116,13 +119,13 @@ impl LoxInterpreter {
                 let mut methods = HashMap::new();
                 for stmt in method_defs.clone() {
                     if let Fun(fn_name, args, body) = *stmt {
-                        let func = Callable::Function(fn_name.clone(), format!("(method {} {})", name, fn_name), args, body, Some(self.env.spawn_closure()), true);
+                        let func = Callable::Function(fn_name.clone(), args, body, Some(self.env.spawn_closure()), true);
                         methods.insert(fn_name.clone(), func);
                     }
                     else { panic!("Found non-function statement while processing methods for class {}.", name); } // should be impossible
                 }
 
-                let class = Callable::Class(name.clone(), String::from("(anonymous)"), methods);
+                let class = Callable::Class(name.clone(), methods);
 
                 self.env.define(&name, Literal::CallLit(class));
                 Ok(None)
@@ -238,7 +241,9 @@ impl LoxInterpreter {
 
     fn call(&mut self, callee: &Callable, args: Vec<Literal>) -> Result<Literal, String> {
         match callee {
-            Callable::Function(name, ref_name, arg_names, body, closure, is_method) => {
+            Callable::Function(name, arg_names, body, closure, is_method) => {
+                println!("\nBefore func call:"); // This tends to be a useful time to inspect env
+                println!("{:?}\n", self.env);
                 self.env.mount_closure(&closure);
                 self.env.lower_scope();
 
@@ -257,34 +262,26 @@ impl LoxInterpreter {
                     Err(e) => Err(e),
                 };
 
+                println!("\nAfter func call:"); // This tends to be a useful time to inspect env
+                println!("{:?}\n", self.env);
+
                 self.env.raise_scope().expect("Call execution structure should guarantee valid scope raise");
                 self.env.unmount_closure().expect("Call execution structure should guarantee valid unmount");
 
-                // anonymize before returning
-                match output {
-                    Ok(l) => Ok(self.anonymize(l)),
-                    Err(e) => Err(e),
-                }
+                println!("\nAfter unmount:"); // This tends to be a useful time to inspect env
+                println!("{:?}\n", self.env);
+
+                output
                 
             },
-            Callable::Class(name, ref_name, methods) => {
-                Ok(Literal::InstLit(Instance::new(Callable::Class(name.clone(), ref_name.clone(), methods.clone()))))
+            Callable::Class(name, methods) => {
+                Ok(Literal::InstLit(Instance::new(Callable::Class(name.clone(), methods.clone()))))
             }
             Callable::Clock => {
                 let now = SystemTime::now();
                 let time_ms = now.duration_since(UNIX_EPOCH).expect("Got time before unix epoch").as_millis() as f64;
                 Ok(Literal::Number(time_ms/1000.0))
             },
-        }
-    }
-
-    fn anonymize(&mut self, l: Literal) -> Literal {
-        self.env.define("(anonymous)", l.clone());
-        match l {
-            Literal::CallLit(Callable::Function(name, _, args, body, closure, is_method)) => {
-                Literal::CallLit(Callable::Function(name, String::from("(anonymous)"), args, body, closure, is_method))
-            },
-            other => other,
         }
     }
 }
